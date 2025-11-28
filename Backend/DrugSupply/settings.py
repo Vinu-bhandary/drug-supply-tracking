@@ -75,10 +75,15 @@ WSGI_APPLICATION = 'DrugSupply.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'Drug_supply_chain',
+        'USER': 'postgres',
+        'PASSWORD': 'test@123',
+        'HOST': 'localhost',   # or your database server IP
+        'PORT': '5433',
     }
 }
+
 
 
 # Password validation
