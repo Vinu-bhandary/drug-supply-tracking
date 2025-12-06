@@ -1,5 +1,27 @@
 from django.db import models
 from MasterApp.models import User, Location, Drug
+from django.contrib.auth.hashers import check_password
+from MasterApp.models import User
+
+
+def login_user(email: str, password: str):
+    """
+    Login function:
+    - Takes email + password
+    - Fetches user from DB
+    - Compares raw password with hashed password_hash field
+    - Returns the user object if correct else None
+    """
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return None
+
+    if check_password(password, user.password_hash):
+        return user  # login success
+    
+    return None  # login failed
+
 
 # User CRUD
 def create_user(data):
@@ -56,3 +78,4 @@ def update_drug(drug_id, data):
 def delete_drug(drug_id):
     obj = Drug.objects.get(id=drug_id)
     return obj.delete()
+
