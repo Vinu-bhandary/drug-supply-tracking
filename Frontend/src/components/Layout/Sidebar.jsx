@@ -5,16 +5,40 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [activeItem, setActiveItem] = useState('dashboard');
 
-    const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'inventory', label: 'Inventory', icon: '📦', path: '/inventory' },
-        { id: 'orders', label: 'Orders', icon: '🛒', path: '/orders', badge: '3' },
-        { id: 'shipments', label: 'Shipments', icon: '🚚', path: '/shipments' },
-        { id: 'ai', label: 'AI Predictions', icon: '🤖', path: '/predictions' },
-        { id: 'alerts', label: 'Alerts', icon: '🔔', path: '/alerts' },
-        { id: 'reports', label: 'Reports', icon: '📈', path: '/reports' },
-        { id: 'settings', label: 'Settings', icon: '⚙️', path: '/settings' },
+    const user = sessionStorage.getItem('role');
+
+    const adminMenu = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/admin/dashboard' },
+        { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/admin/orders'},
+        { id: 'users', label: 'User Management', icon: '⚙️', path: '/admin/users' },  
+        { id: 'locations', label: 'Location Management', icon: '📍', path: '/admin/locations' },
+    ];         
+
+    const vendorMenu = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/vendor/dashboard' },
+        { id: 'products', label: 'Product Catalog', icon: '📦', path: '/vendor/products' },
+        { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/vendor/orders' },
+        { id: 'shipments', label: 'Shipments', icon: '🚚', path: '/vendor/shipments' },
+        { id: 'analytics', label: 'Sales Analytics', icon: '📈', path: '/vendor/analytics' },
+        { id: 'reports', label: 'Reports', icon: '📈', path: '/vendor/reports' },
     ];
+
+    const hospitalMenu = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/hospital/dashboard' },
+        { id: 'inventory', label: 'Inventory', icon: '📦', path: '/hospital/inventory' },
+        { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/hospital/orders' },
+        { id: 'ai', label: 'AI Predictions', icon: '🤖', path: '/hospital/predictions' },
+        { id: 'alerts', label: 'Alerts', icon: '🔔', path: '/hospital/alerts' },
+        { id: 'reports', label: 'Reports', icon: '📈', path: '/hospital/reports' },
+    ];
+
+    let menuItems = adminMenu;
+
+    if (user === 'vendor') {
+        menuItems = vendorMenu;
+    } else if (user === 'hospital') {
+        menuItems = hospitalMenu;
+    }
 
     const handleMenuClick = (item) => {
         setActiveItem(item.id);
