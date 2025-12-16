@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import DashboardLayout from '../components/Layout/DashboardLayout';
-import StatCard from '../components/Common/StatCard';
-import LineChart from '../components/Charts/LineChart';
-import DoughnutChart from '../components/Charts/DoughnutChart';
-import OrdersTable from '../components/Tables/OrdersTable';
-import { vendorData } from '../data/vendorData';
+import DashboardLayout from '../../components/Layout/DashboardLayout';
+import StatCard from '../../components/Common/StatCard';
+import LineChart from '../../components/Charts/LineChart';
+import DoughnutChart from '../../components/Charts/DoughnutChart';
+import OrdersTable from '../../components/Tables/OrdersTable';
+import { vendorData } from '../../data/vendorData';
 
 export default function VendorDashboard() {
+    const user = localStorage.getItem('role');
+    useEffect(() => {
+        if (user !== 'vendor') {
+            alert('You are not authorized to access this page.');
+            window.location.href = '/';
+            return;
+        }
+    })
     const [data, setData] = useState(vendorData);
 
     useEffect(() => {

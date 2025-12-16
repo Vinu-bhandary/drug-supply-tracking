@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import AvatarButton from '../buttons/AvatarButton';
 
 export default function Topbar({ title, subtitle, userRole, userName }) {
     const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -54,15 +55,7 @@ export default function Topbar({ title, subtitle, userRole, userName }) {
                 </div>
 
 
-                <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                    {userName?.substring(0, 2)?.toUpperCase()}
-                </div>
-                <div className="text-sm">
-                    <p className="font-semibold text-gray-900">{userName}</p>
-                    <p className="text-gray-600">{userRole}</p>
-                </div>
-                </div>
+                <AvatarButton />
             </div>
         </header>
     );

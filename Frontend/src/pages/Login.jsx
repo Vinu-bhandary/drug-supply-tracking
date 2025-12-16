@@ -1,6 +1,8 @@
 // src/pages/Login.jsx
 import { useState } from 'react';
 
+const API = 'http://127.0.0.1:8000/api';
+
 export default function Login() {
     const [form, setForm] = useState({
         email: '',
@@ -21,23 +23,39 @@ export default function Login() {
         setLoading(true);
 
         try {
-        // TODO: replace with your real API call
-        // const res = await fetch('/api/auth/login', { ... });
-        // const data = await res.json();
-        // save token, redirect based on form.role
+        const response = await fetch(API+'/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+        });
 
-        console.log('Logging in with', form);
-        // example client-side redirect:
-        if (form.role === 'hospital') {
-            window.location.href = '/dashboard/hospital';
-        } else if (form.role === 'vendor') {
-            window.location.href = '/dashboard/vendor';
-        } else {
-            window.location.href = '/dashboard/admin';
+        if (!response.ok) {
+            throw new Error('Login failed. Please try again.');
         }
+
+        const res = await response.json();
+        const data = res.data;
+        console.log('Login successful:', data);
+        localStorage.setItem('user_id', data.user_id);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('email', data.email);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('location_id', data.location_id);
+        console.log(data.role);
+        if (data.role === form.role) {
+            if (form.role === 'hospital') {
+                window.location.href = '/hospital/dashboard';
+            } else if (form.role === 'vendor') {
+                window.location.href = '/vendor/dashboard';
+            } else {
+                window.location.href = '/admin/dashboard';
+            }
+        } else {
+            throw new Error('Selected role does not match user role.');
+        }
+        
         } catch (err) {
-        console.error(err);
-        setError('Login failed. Please try again.');
+        setError(err.message);
         } finally {
         setLoading(false);
         }
