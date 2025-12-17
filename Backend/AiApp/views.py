@@ -19,3 +19,170 @@ def update_forecast(forecast_id, data):
 def delete_forecast(forecast_id):
     obj = Forecast.objects.get(id=forecast_id)
     return obj.delete()
+
+
+## Forecast Generation Logic
+import datetime
+
+import numpy as np
+import pandas as pd
+from django.db.models import Sum
+from sklearn.ensemble import RandomForestRegressor
+from django.utils import timezone
+
+from InventoryApp.models import ConsumptionRecord
+from AiApp.models import Forecast
+
+
+def _build_training_dataframe(start_date=None, end_date=None):
+    """
+    Aggregate ConsumptionRecord per day, drug, and location,
+    and build a feature dataframe for model training.
+    """
+    qs = ConsumptionRecord.objects.all()
+
+    if start_date:
+        qs = qs.filter(consumption_date__gte=start_date)
+    if end_date:
+        qs = qs.filter(consumption_date__lte=end_date)
+
+    # Aggregate quantity per day
+    data = (
+        qs.values("drug_id", "location_id", "consumption_date")
+          .annotate(total_qty=Sum("qty_consumed"))
+          .order_by("drug_id", "location_id", "consumption_date")
+    )
+
+    if not data:
+        return None
+
+    df = pd.DataFrame(list(data))
+    df.rename(columns={"consumption_date": "date"}, inplace=True)
+
+    # Basic time features
+    df["date"] = pd.to_datetime(df["date"])
+    df["year"] = df["date"].dt.year
+    df["month"] = df["date"].dt.month
+    df["day"] = df["date"].dt.day
+    df["dayofweek"] = df["date"].dt.dayofweek
+
+    # Sort for lag features
+    df = df.sort_values(["drug_id", "location_id", "date"])
+
+    # Lag features and rolling means per drug-location
+    def add_lags(group):
+        group = group.copy()
+        group["lag_1"] = group["total_qty"].shift(1)
+        group["lag_7"] = group["total_qty"].shift(7)
+        group["rolling_7_mean"] = group["total_qty"].rolling(window=7).mean()
+        return group
+
+    df = df.groupby(["drug_id", "location_id"], group_keys=False).apply(add_lags)
+
+    # Drop rows where lag features are NaN (beginning of series)
+    df = df.dropna(subset=["lag_1", "lag_7", "rolling_7_mean"])
+
+    return df
+
+
+def train_random_forest_model(df):
+    """
+    Train a RandomForestRegressor on the feature dataframe.
+    Returns the fitted model and the list of feature columns.
+    """
+    feature_cols = [
+        "drug_id", "location_id",
+        "year", "month", "day", "dayofweek",
+        "lag_1", "lag_7", "rolling_7_mean",
+    ]
+    X = df[feature_cols]
+    y = df["total_qty"]
+
+    model = RandomForestRegressor(
+        n_estimators=300,
+        max_depth=12,
+        random_state=42,
+        n_jobs=-1,
+    )
+    model.fit(X, y)
+
+    return model, feature_cols
+
+
+def _create_future_frame_for_pair(drug_id, location_id, last_date, periods=7):
+    """
+    Build a future dataframe for a given (drug, location) pair.
+    Generates simple date features for prediction.
+    """
+    future_dates = [last_date + datetime.timedelta(days=i) for i in range(1, periods + 1)]
+    fdf = pd.DataFrame({
+        "drug_id": [drug_id] * periods,
+        "location_id": [location_id] * periods,
+        "date": pd.to_datetime(future_dates),
+    })
+    fdf["year"] = fdf["date"].dt.year
+    fdf["month"] = fdf["date"].dt.month
+    fdf["day"] = fdf["date"].dt.day
+    fdf["dayofweek"] = fdf["date"].dt.dayofweek
+    return fdf
+
+
+def generate_forecasts_for_range(days_ahead=7):
+    """
+    Main function to be called (e.g. from a management command or admin button).
+    Trains model on past data and writes N days of forecasts into Forecast table.
+    """
+    df = _build_training_dataframe()
+    if df is None or df.empty:
+        return 0
+
+    # Fit model
+    model, feature_cols = train_random_forest_model(df)
+
+    created_count = 0
+
+    # Get distinct pairs
+    pairs = df[["drug_id", "location_id"]].drop_duplicates()
+
+    for _, row in pairs.iterrows():
+        d_id = row["drug_id"]
+        l_id = row["location_id"]
+
+        # Subset to this pair to compute last date and lags
+        sub = df[(df["drug_id"] == d_id) & (df["location_id"] == l_id)].copy()
+        if sub.empty:
+            continue
+
+        last_date = sub["date"].max()
+
+        # Build future frame
+        future = _create_future_frame_for_pair(d_id, l_id, last_date, periods=days_ahead)
+
+        # For lags, use last known values (simple approach for demo)
+        last_row = sub.sort_values("date").iloc[-1]
+        future["lag_1"] = last_row["total_qty"]
+        # Use mean of last 7 days if available, else fall back to last quantity
+        last_7 = sub.sort_values("date").tail(7)["total_qty"]
+        rolling_7 = float(last_7.mean())
+        future["lag_7"] = rolling_7
+        future["rolling_7_mean"] = rolling_7
+
+        # Predict
+        X_future = future[feature_cols]
+        preds = model.predict(X_future)
+        future["predicted_qty"] = np.maximum(preds.round().astype(int), 0)
+
+        # Write to Forecast table
+        for _, fr in future.iterrows():
+            Forecast.objects.update_or_create(
+                id=f"{d_id}_{l_id}_{fr['date'].date()}",
+                defaults={
+                    "drug_id_id": d_id,
+                    "location_id_id": l_id,
+                    "forecast_date": fr["date"].date(),
+                    "predicted_qty": int(fr["predicted_qty"]),
+                },
+            )
+            created_count += 1
+
+    return created_count
