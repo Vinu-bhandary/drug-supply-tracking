@@ -1,90 +1,4 @@
-# from django.db import models
-# from MasterApp.models import User, Location, Drug
-# from django.contrib.auth.hashers import check_password
-# from MasterApp.models import User
-# from ninja import NinjaAPI
 
-# seed_api = NinjaAPI(urls_namespace="seed_api")
-
-# def login_user(email: str, password: str):
-#     """
-#     Login function:
-#     - Takes email + password
-#     - Fetches user from DB
-#     - Compares raw password with hashed password_hash field
-#     - Returns the user object if correct else None
-#     """
-#     try:
-#         user = User.objects.get(email=email)
-#     except User.DoesNotExist:
-#         return None
-
-#     if check_password(password, user.password_hash):
-#         return user  # login success
-    
-#     return None  # login failed
-
-
-# # User CRUD
-# @seed_api.post('/user')
-# def create_user(data):
-#     return User.objects.create(**data)
-
-# @seed_api.get('/user/{user_id}')
-# def read_user(user_id):
-#     return User.objects.get(id=user_id)
-
-# def update_user(user_id, data):
-#     obj = User.objects.get(id=user_id)
-#     for k, v in data.items():
-#         setattr(obj, k, v)
-#     obj.save()
-#     return obj
-
-# def delete_user(user_id):
-#     obj = User.objects.get(id=user_id)
-#     return obj.delete()
-
-
-# # Location CRUD
-# def create_location(data):
-#     return Location.objects.create(**data)
-
-# def read_location(location_id):
-#     return Location.objects.get(id=location_id)
-
-# def update_location(location_id, data):
-#     obj = Location.objects.get(id=location_id)
-#     for k, v in data.items():
-#         setattr(obj, k, v)
-#     obj.save()
-#     return obj
-
-# def delete_location(location_id):
-#     obj = Location.objects.get(id=location_id)
-#     return obj.delete()
-
-
-# # Drug CRUD
-# def create_drug(data):
-#     return Drug.objects.create(**data)
-
-# def read_drug(drug_id):
-#     return Drug.objects.get(id=drug_id)
-
-# def update_drug(drug_id, data):
-#     obj = Drug.objects.get(id=drug_id)
-#     for k, v in data.items():
-#         setattr(obj, k, v)
-#     obj.save()
-#     return obj
-
-# def delete_drug(drug_id):
-#     obj = Drug.objects.get(id=drug_id)
-#     return obj.delete()
-
-
-# views.py or api.py
 from ninja import Router
 from .schemas import LocationOut, LocationCreate, DrugOut, UserOut, DrugCreate, UserCreate, SuccessResponse, ErrorResponse
 from .models import Location, Drug, User
@@ -124,7 +38,7 @@ def create_location(request, payload: LocationCreate):
 def get_location(request, location_id: str):
     return Location.objects.get(id=location_id)
 
-# Drug endpoints
+
 @router.get("/drugs/", response=list[DrugOut])
 def list_drugs(request):
     return Drug.objects.all()
@@ -134,7 +48,7 @@ def create_drug(request, payload: DrugCreate):
     drug = Drug.objects.create(**payload.dict())
     return drug
 
-# User endpoints
+
 @router.get("/users/", response=list[UserOut])
 def list_users(request):
     user = User.objects.all()

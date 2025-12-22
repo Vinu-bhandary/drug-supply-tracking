@@ -2,7 +2,7 @@ from django.db import models
 from SupplyApp.models import Batch, Order, OrderItem
 from MasterApp.models import Drug, Location, User
 
-# Batch CRUD
+
 def create_batch(data):
     return Batch.objects.create(**data)
 
@@ -21,7 +21,7 @@ def delete_batch(batch_id):
     return obj.delete()
 
 
-# Order CRUD
+
 def create_order(data):
     return Order.objects.create(**data)
 
@@ -40,7 +40,7 @@ def delete_order(order_id):
     return obj.delete()
 
 
-# OrderItem CRUD
+
 def create_order_item(data):
     return OrderItem.objects.create(**data)
 

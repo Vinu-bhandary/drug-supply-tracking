@@ -1,7 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HospitalDashboard from './pages/Hospital/HospitalDashboard';
 import VendorDashboard from './pages/Vendor/VendorDashboard';
-import {AdminDashboard, UserManagement, OrdersOverview, LocationManagement} from './pages/Admin/AdminDashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import LocationManagement from './pages/Admin/LocationManagement';
+import OrdersOverview from './pages/Admin/OrdersOverview';
+import UserManagement from './pages/Admin/UserManagement';
 import DemoHome from './pages/DemoHome';
 import Login from './pages/Login';
 

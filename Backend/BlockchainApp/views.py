@@ -2,7 +2,7 @@ from django.db import models
 from BlockchainApp.models import BlockchainTransaction
 from SupplyApp.models import Batch
 
-# BlockchainTransaction CRUD
+
 def create_blockchain_tx(data):
     return BlockchainTransaction.objects.create(**data)
 

@@ -25,12 +25,6 @@ export default function Topbar({ title, subtitle, userRole, userName }) {
 
             <div className="flex items-center gap-6">
 
-                <input
-                type="text"
-                placeholder="Search..."
-                className="px-4 py-2 border border-gray-300 rounded-lg w-48 focus:outline-none focus:border-blue-500"
-                />
-
 
                 <div className="relative" ref={notifRef}>
                 <button
