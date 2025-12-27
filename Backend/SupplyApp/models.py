@@ -26,6 +26,7 @@ class Order(models.Model):
     carrier_name = models.CharField(max_length=100)
     tracking_number = models.CharField(max_length=100)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.order_number

@@ -3,32 +3,6 @@ import DashboardLayout from "../../components/Layout/DashboardLayout";
 import GenericTable from "../../components/tables/GenericTable";
 import DropdownButton from "../../components/common/DropdownButton";
 
-const MOCK_LOCATIONS = [
-    {
-        id: "HOSP-MUM-01",
-        name: "City General Hospital, Mumbai",
-        type: "Hospital",
-        city: "Mumbai",
-        state: "Maharashtra",
-        country: "India",
-    },
-    {
-        id: "HOSP-BLR-01",
-        name: "Fortis Healthcare, Bengaluru",
-        type: "Hospital",
-        city: "Bengaluru",
-        state: "Karnataka",
-        country: "India",
-    },
-    {
-        id: "VEND-DEL-01",
-        name: "MedSupply Distributors, Delhi",
-        type: "Vendor",
-        city: "New Delhi",
-        state: "Delhi",
-        country: "India",
-    },
-];
 
 export default function LocationManagement() {
     const user = localStorage.getItem('role');
@@ -40,10 +14,16 @@ export default function LocationManagement() {
         }
     })
 
+    const LOCATIONS = [];
 
-    const [locations] = useState(MOCK_LOCATIONS);
+    const [locations, setLocations] = useState(LOCATIONS);
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("ALL");
+
+    useEffect(() => async () => {
+        const LOCATIONS = await fetch('http://127.0.0.1:8000/api/seed/locations/').then(res => res.json());
+        setLocations(LOCATIONS);
+    }, []);
 
     const filtered = locations.filter((loc) => {
         const matchSearch =

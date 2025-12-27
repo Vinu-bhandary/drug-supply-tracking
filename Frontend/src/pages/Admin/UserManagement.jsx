@@ -3,29 +3,6 @@ import DashboardLayout from "../../components/Layout/DashboardLayout";
 import GenericTable from "../../components/tables/GenericTable";
 import DropdownButton from "../../components/common/DropdownButton";
 
-const MOCK_USERS = [
-  {
-    id: "admin-001",
-    username: "admin",
-    email: "admin@pharmaco.com",
-    role: "ADMIN",
-    location_name: "System-wide",
-  },
-  {
-    id: "hosp-001",
-    username: "hosp_mumbai",
-    email: "hospital@citygeneral.com",
-    role: "HOSPITAL",
-    location_name: "City General Hospital, Mumbai",
-  },
-  {
-    id: "vend-001",
-    username: "vendor_medsupply",
-    email: "admin@medsupply.com",
-    role: "VENDOR",
-    location_name: "MedSupply Distributors, Delhi",
-  },
-];
 
 export default function UserManagement() {
     const user = localStorage.getItem('role');
@@ -36,8 +13,19 @@ export default function UserManagement() {
             return;
         }
     })
+  
 
-  const [users] = useState(MOCK_USERS);
+
+  const USERS = [];
+  const [users, setUsers] = useState(USERS);
+
+  useEffect(() => async () => {
+    const USERS = await fetch('http://127.0.0.1:8000/api/seed/users/').then(res => res.json());
+    setUsers(USERS);
+  }, []);
+
+  console.log("Users: ", users);
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
 
@@ -45,16 +33,16 @@ export default function UserManagement() {
     const matchSearch =
       u.username.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.location_name.toLowerCase().includes(search.toLowerCase());
+      u.location.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === "ALL" ? true : u.role === roleFilter;
     return matchSearch && matchRole;
   });
-
+  console.log("Filtered: ",filtered);
   const columns = [
     { key: "username", label: "User" },
     { key: "email", label: "Email" },
     { key: "role", label: "Role" },
-    { key: "location_name", label: "Location" },
+    { key: "location", label: "Location" },
   ];
 
   const actions = (row) => (
@@ -63,10 +51,6 @@ export default function UserManagement() {
       items={[
         { label: "View", onClick: () => console.log("view", row) },
         { label: "Edit", onClick: () => console.log("edit", row) },
-        {
-          label: row.status === "active" ? "Deactivate" : "Activate",
-          onClick: () => console.log("toggle", row),
-        },
         {
           label: "Delete",
           danger: true,

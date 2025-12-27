@@ -5,57 +5,6 @@ import Badge from "../../components/common/Badge";
 import DropdownButton from "../../components/common/DropdownButton";
 import StatCard from "../../components/Common/StatCard";
 
-const MOCK_ORDERS = [
-    {
-        id: "order-001",
-        order_number: "ORD-2024-0001",
-        from_location: "City General Hospital, Mumbai",
-        to_location: "MedSupply Distributors, Delhi",
-        drug_summary: "Paracetamol 500mg, Metformin 500mg",
-        total_qty: 500,
-        status: "PENDING",
-        created_at: "2024-11-25",
-        shipped_at: null,
-        delivered_at: null,
-    },
-    {
-        id: "order-002",
-        order_number: "ORD-2024-0002",
-        from_location: "Fortis Healthcare, Bengaluru",
-        to_location: "MedSupply Distributors, Delhi",
-        drug_summary: "Amoxicillin 250mg",
-        total_qty: 500,
-        status: "SHIPPED",
-        created_at: "2024-11-24",
-        shipped_at: "2024-11-26",
-        delivered_at: null,
-    },
-    {
-        id: "order-003",
-        order_number: "ORD-2024-0003",
-        from_location: "City General Hospital, Mumbai",
-        to_location: "MedSupply Distributors, Delhi",
-        drug_summary: "Lisinopril 10mg",
-        total_qty: 300,
-        status: "DELIVERED",
-        created_at: "2024-11-20",
-        shipped_at: "2024-11-21",
-        delivered_at: "2024-11-23",
-    },
-    {
-        id: "order-004",
-        order_number: "ORD-2024-0004",
-        from_location: "City General Hospital, Mumbai",
-        to_location: "MedSupply Distributors, Delhi",
-        drug_summary: "Paracetamol 500mg",
-        total_qty: 1000,
-        status: "CANCELLED",
-        created_at: "2024-11-19",
-        shipped_at: null,
-        delivered_at: null,
-    },
-];
-
 const statusToBadge = (status) => {
     switch (status) {
         case "PENDING":
@@ -81,17 +30,23 @@ export default function OrdersOverview() {
         }
     })
 
-    const [orders] = useState(MOCK_ORDERS);
+    const ORDERS = [];
+
+    const [orders, setOrders] = useState(ORDERS);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+
+    useEffect(() => async () => {
+        const ORDERS = await fetch('http://127.0.0.1:8000/api/seed/orders/').then(res => res.json());
+        setOrders(ORDERS);
+    }, [])
 
     const filtered = useMemo(() => {
         return orders.filter((order) => {
         const matchSearch =
             order.order_number.toLowerCase().includes(search.toLowerCase()) ||
-            order.from_location.toLowerCase().includes(search.toLowerCase()) ||
-            order.to_location.toLowerCase().includes(search.toLowerCase()) ||
-            order.drug_summary.toLowerCase().includes(search.toLowerCase());
+            order.from_location_id.toLowerCase().includes(search.toLowerCase()) ||
+            order.to_location_id.toLowerCase().includes(search.toLowerCase());
 
         const matchStatus =
             statusFilter === "ALL" ? true : order.status === statusFilter;
@@ -102,10 +57,8 @@ export default function OrdersOverview() {
 
     const columns = [
         { key: "order_number", label: "Order ID" },
-        { key: "from_location", label: "From" },
-        { key: "to_location", label: "To" },
-        { key: "drug_summary", label: "Drugs" },
-        { key: "total_qty", label: "Total Qty" },
+        { key: "from_location_id", label: "From" },
+        { key: "to_location_id", label: "To" },
         {
         key: "status",
         label: "Status",

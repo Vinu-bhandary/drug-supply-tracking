@@ -5,13 +5,14 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [activeItem, setActiveItem] = useState('dashboard');
 
-    const user = sessionStorage.getItem('role');
+    const user = localStorage.getItem('role');
 
     const adminMenu = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/admin/dashboard' },
         { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/admin/orders'},
         { id: 'users', label: 'User Management', icon: '⚙️', path: '/admin/users' },  
         { id: 'locations', label: 'Location Management', icon: '📍', path: '/admin/locations' },
+        { id: 'drugs', label: 'Drug Management', icon: '💊', path: '/admin/drugs' },
     ];         
 
     const vendorMenu = [

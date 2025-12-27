@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import { useState } from 'react';
 
 const API = 'http://127.0.0.1:8000/api';
@@ -39,10 +38,10 @@ export default function Login() {
         localStorage.setItem('user_id', data.user_id);
         localStorage.setItem('username', data.username);
         localStorage.setItem('email', data.email);
-        localStorage.setItem('role', data.role);
+        localStorage.setItem('role', data.role.toLowerCase());
         localStorage.setItem('location_id', data.location_id);
         console.log(data.role);
-        if (data.role === form.role) {
+        if (data.role.toLowerCase() === form.role) {
             if (form.role === 'hospital') {
                 window.location.href = '/hospital/dashboard';
             } else if (form.role === 'vendor') {

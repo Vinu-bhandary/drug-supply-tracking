@@ -51,6 +51,7 @@ class UserBase(BaseModel):
     email: EmailStr
     role: str
     location_id: Optional[str] = None
+    location: Optional[str] = None
 
 
 class UserCreate(BaseModel):

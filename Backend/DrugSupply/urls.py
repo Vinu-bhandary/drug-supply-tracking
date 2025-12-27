@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.urls import path
 from MasterApp.views import router, router1
 from ninja import NinjaAPI
+from SupplyApp.views import admin_router
 
 api = NinjaAPI()
 api.add_router('/seed/', router)
+api.add_router('/seed/', admin_router)
 api.add_router('/auth/', router1)
 
 urlpatterns = [

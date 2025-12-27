@@ -19,7 +19,7 @@ def login(request):
         return 400, {"detail": "User does not exist"}
 
     if check_password(data['password'], user.password_hash):
-        return 200, {"message": "Login successful", "data": {"user_id": user.id, "username": user.username, "email": user.email, "role": user.role, "location_id": user.location_id.id}}
+        return 200, {"message": "Login successful", "data": {"user_id": user.id, "username": user.username, "email": user.email, "role": user.role, "location_id": user.location_id.id if user.location_id else None}}
     
     return 400, {"detail": "Invalid email or password"}
 
@@ -60,7 +60,8 @@ def list_users(request):
                 "username": u.username,
                 "email": u.email,
                 "role": u.role,
-                "location_id": u.location_id.id if u.location_id else None
+                "location_id": u.location_id.id if u.location_id else None,
+                "location": u.location_id.name if u.location_id else "System-wide"
             }
         )
     return user_list
