@@ -1,10 +1,9 @@
-# schemas.py
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
 
-# ========== Location Schemas ==========
+
 class LocationBase(BaseModel):
     id: str
     name: str
@@ -45,13 +44,14 @@ class LocationOut(LocationBase):
         from_attributes = True
 
 
-# ========== User Schemas ==========
+
 class UserBase(BaseModel):
     id: str
     username: str
     email: EmailStr
     role: str
     location_id: Optional[str] = None
+    location: Optional[str] = None
 
 
 class UserCreate(BaseModel):
@@ -80,7 +80,7 @@ class UserWithLocation(UserOut):
     location_id: Optional[LocationOut] = None
 
 
-# ========== Drug Schemas ==========
+
 class DrugBase(BaseModel):
     id: str
     name: str
@@ -112,7 +112,7 @@ class DrugOut(DrugBase):
         from_attributes = True
 
 
-# ========== Error Response Schemas ==========
+
 class ErrorResponse(BaseModel):
     detail: str
     status_code: int = 400

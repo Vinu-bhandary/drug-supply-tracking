@@ -1,7 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HospitalDashboard from './pages/Hospital/HospitalDashboard';
 import VendorDashboard from './pages/Vendor/VendorDashboard';
-import {AdminDashboard, UserManagement, OrdersOverview, LocationManagement} from './pages/Admin/AdminDashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import LocationManagement from './pages/Admin/LocationManagement';
+import OrdersOverview from './pages/Admin/OrdersOverview';
+import UserManagement from './pages/Admin/UserManagement';
+import DrugManagement from './pages/Admin/DrugManagement';
 import DemoHome from './pages/DemoHome';
 import Login from './pages/Login';
 
@@ -17,6 +21,7 @@ export default function App() {
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/orders" element={<OrdersOverview />} />
         <Route path="/admin/locations" element={<LocationManagement />} />
+        <Route path="/admin/drugs" element={<DrugManagement />} />
       </Routes>
     </Router>
   );

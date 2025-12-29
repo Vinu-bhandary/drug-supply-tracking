@@ -3,7 +3,7 @@ from InventoryApp.models import Inventory, Alert, ConsumptionRecord
 from MasterApp.models import User, Drug, Location
 from SupplyApp.models import Batch
 
-# Inventory CRUD
+
 def create_inventory(data):
     return Inventory.objects.create(**data)
 
@@ -22,7 +22,7 @@ def delete_inventory(inventory_id):
     return obj.delete()
 
 
-# Alert CRUD
+
 def create_alert(data):
     return Alert.objects.create(**data)
 
@@ -41,7 +41,7 @@ def delete_alert(alert_id):
     return obj.delete()
 
 
-# ConsumptionRecord CRUD
+
 def create_consumption(data):
     return ConsumptionRecord.objects.create(**data)
 
