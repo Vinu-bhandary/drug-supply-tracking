@@ -21,7 +21,6 @@ export default function Sidebar() {
         { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/vendor/orders' },
         { id: 'shipments', label: 'Shipments', icon: '🚚', path: '/vendor/shipments' },
         { id: 'analytics', label: 'Sales Analytics', icon: '📈', path: '/vendor/analytics' },
-        { id: 'reports', label: 'Reports', icon: '📈', path: '/vendor/reports' },
     ];
 
     const hospitalMenu = [
