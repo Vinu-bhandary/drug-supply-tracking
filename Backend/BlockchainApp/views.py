@@ -29,13 +29,15 @@ import json
 w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:7545"))
 if not w3.is_connected():
     raise Exception("❌ Ganache is not running")
+print("✅ Connected to Ganache")
+
 # ACCOUNT (GANACHE PRIVATE KEY)
 
-PRIVATE_KEY = "0x2034c9ea2468cbc6191a3688289260dcd04caa79f6f7e65ad95f90305a95e239"
+PRIVATE_KEY = "0x0611b15e8be8842748234b1489b0d97518bde8a07ab4eaa9ddae860961f0358d"
 ACCOUNT = w3.eth.account.from_key(PRIVATE_KEY)
 
 # SMART CONTRACT DETAILS
-CONTRACT_ADDRESS = "0x8ea284C73A5d36E18A755527a076f395ef8Ee2b6"
+CONTRACT_ADDRESS = "0x1345850698BFC523b785f17AE34264BC826518ad"
 
 with open("contract_abi.json") as f:
     abi = json.load(f)
@@ -71,6 +73,34 @@ def create_blockchain_tx(data):
 
     return tx
 #----------------------------------------------------------------#
+#add TRANSACTION
+def add_transaction_on_blockchain(tx_id, status):
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+
+    tx = contract.functions.addTransaction(
+        tx_id,
+        status
+    ).build_transaction({
+        "from": ACCOUNT.address,
+        "nonce": nonce,
+        "gas": 300000,
+        "gasPrice": w3.to_wei("20", "gwei")
+    })
+
+    signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+    return w3.to_hex(tx_hash)
+
+#getTransaction
+def get_transaction_from_blockchain(tx_id):
+    tx = contract.functions.getTransaction(tx_id).call()
+    return {
+        "id": tx[0],
+        "status": tx[1]
+    }
+
+
 # READ TRANSACTION
 
 # def read_blockchain_tx(tx_id):
