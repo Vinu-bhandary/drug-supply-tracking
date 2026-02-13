@@ -2,8 +2,10 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.hashers import make_password
+import random
 
-# Adjust these imports to your real app labels
+
+
 from MasterApp.models import User, Location, Drug
 from InventoryApp.models import Inventory, Alert, ConsumptionRecord
 from SupplyApp.models import Order, OrderItem, Batch
@@ -50,6 +52,20 @@ class Command(BaseCommand):
             ),
         )
 
+        hosp_delhi, _ = Location.objects.get_or_create(
+            id="HOSP-DEL-01",
+            defaults=dict(
+                name="Apollo Hospital, New Delhi",
+                type="Hospital",
+                address_line1="789 Delhi Medical Center",
+                address_line2="Connaught Place",
+                city="New Delhi",
+                state="Delhi",
+                postal_code="110001",
+                country="India",
+            ),
+        )
+
         vendor_delhi, _ = Location.objects.get_or_create(
             id="VEND-DEL-01",
             defaults=dict(
@@ -64,6 +80,20 @@ class Command(BaseCommand):
             ),
         )
 
+        vendor_mum, _ = Location.objects.get_or_create(
+            id="VEND-MUM-01",
+            defaults=dict(
+                name="PharmaCare Wholesalers, Mumbai",
+                type="Vendor",
+                address_line1="101 Medical Trade Center",
+                address_line2=None,
+                city="Mumbai",
+                state="Maharashtra",
+                postal_code="400002",
+                country="India",
+            ),
+        )
+
         # ========== 2. USERS ==========
         self.stdout.write("Creating users...")
 
@@ -72,7 +102,7 @@ class Command(BaseCommand):
             defaults=dict(
                 username="admin",
                 email="admin@dst.com",
-                password_hash=make_password("admin123"),  # for demo only – use set_password in real auth
+                password_hash=make_password("admin123"),
                 role="ADMIN",
                 location_id=None,
             ),
@@ -89,6 +119,17 @@ class Command(BaseCommand):
             ),
         )
 
+        hosp_user_blr, _ = User.objects.get_or_create(
+            id="user-hosp-02",
+            defaults=dict(
+                username="hosp_bengaluru",
+                email="hospital@fortis.com",
+                password_hash=make_password("hospital123"),
+                role="HOSPITAL",
+                location_id=hosp_blr,
+            ),
+        )
+
         vendor_user, _ = User.objects.get_or_create(
             id="user-vendor-01",
             defaults=dict(
@@ -100,356 +141,219 @@ class Command(BaseCommand):
             ),
         )
 
-        # ========== 3. DRUGS ==========
+        # ========== 3. DRUGS (15 rows) ==========
         self.stdout.write("Creating drugs...")
 
-        paracetamol, _ = Drug.objects.get_or_create(
-            id="DRUG-PCM-500",
-            defaults=dict(
-                name="Paracetamol 500mg",
-                category="Analgesic",
-                strength="500mg",
-                unit="tablets",
-                reorder_point=500,
-            ),
-        )
+        drugs_data = [
+            ("DRUG-PCM-500", "Paracetamol 500mg", "Analgesic", "500mg", "tablets", 500),
+            ("DRUG-MET-500", "Metformin 500mg", "Diabetic Care", "500mg", "tablets", 300),
+            ("DRUG-AMOX-250", "Amoxicillin 250mg", "Antibiotic", "250mg", "capsules", 400),
+            ("DRUG-LISI-10", "Lisinopril 10mg", "Cardiovascular", "10mg", "tablets", 200),
+            ("DRUG-ASP-500", "Aspirin 500mg", "Analgesic", "500mg", "tablets", 350),
+            ("DRUG-IBU-400", "Ibuprofen 400mg", "Analgesic", "400mg", "tablets", 450),
+            ("DRUG-OMEP-20", "Omeprazole 20mg", "Gastro", "20mg", "capsules", 280),
+            ("DRUG-LORA-10", "Loratadine 10mg", "Antihistamine", "10mg", "tablets", 320),
+            ("DRUG-CEFT-500", "Ceftriaxone 500mg", "Antibiotic", "500mg", "injection", 150),
+            ("DRUG-CIPRO-500", "Ciprofloxacin 500mg", "Antibiotic", "500mg", "tablets", 220),
+            ("DRUG-DOLO-650", "Paracetamol 650mg", "Analgesic", "650mg", "tablets", 380),
+            ("DRUG-ATEN-50", "Atenolol 50mg", "Cardiovascular", "50mg", "tablets", 240),
+            ("DRUG-AMLODIP-5", "Amlodipine 5mg", "Cardiovascular", "5mg", "tablets", 260),
+            ("DRUG-ATORVA-20", "Atorvastatin 20mg", "Lipid Lowering", "20mg", "tablets", 290),
+            ("DRUG-RANITID-150", "Ranitidine 150mg", "Gastro", "150mg", "tablets", 310),
+        ]
 
-        metformin, _ = Drug.objects.get_or_create(
-            id="DRUG-MET-500",
-            defaults=dict(
-                name="Metformin 500mg",
-                category="Diabetic Care",
-                strength="500mg",
-                unit="tablets",
-                reorder_point=300,
-            ),
-        )
+        drugs = {}
+        for drug_id, name, category, strength, unit, reorder_point in drugs_data:
+            drug, _ = Drug.objects.get_or_create(
+                id=drug_id,
+                defaults=dict(
+                    name=name,
+                    category=category,
+                    strength=strength,
+                    unit=unit,
+                    reorder_point=reorder_point,
+                ),
+            )
+            drugs[drug_id] = drug
 
-        amoxicillin, _ = Drug.objects.get_or_create(
-            id="DRUG-AMOX-250",
-            defaults=dict(
-                name="Amoxicillin 250mg",
-                category="Antibiotic",
-                strength="250mg",
-                unit="capsules",
-                reorder_point=400,
-            ),
-        )
-
-        lisinopril, _ = Drug.objects.get_or_create(
-            id="DRUG-LISI-10",
-            defaults=dict(
-                name="Lisinopril 10mg",
-                category="Cardiovascular",
-                strength="10mg",
-                unit="tablets",
-                reorder_point=200,
-            ),
-        )
-
-        # ========== 4. BATCHES ==========
+        # ========== 4. BATCHES (15 rows) ==========
         self.stdout.write("Creating batches...")
 
-        batch_pcm, _ = Batch.objects.get_or_create(
-            id="BATCH-PCM-001",
-            defaults=dict(
-                drug_id=paracetamol,
-                batch_number="PCM-2024-001",
-                mfg_date=today - timedelta(days=180),
-                exp_date=today + timedelta(days=365),
-                blockchain_hash="0xPCMbatch001",
-                qr_code_data="PCM-2024-001|DRUG-PCM-500",
-            ),
-        )
+        batches = {}
+        batch_counter = 1
+        for drug_id, drug in drugs.items():
+            batch_id = f"BATCH-{drug_id.split('-')[1]}-001"
+            batch, _ = Batch.objects.get_or_create(
+                id=batch_id,
+                defaults=dict(
+                    drug_id=drug,
+                    batch_number=f"{drug_id.split('-')[1]}-2024-001",
+                    mfg_date=today - timedelta(days=random.randint(100, 250)),
+                    exp_date=today + timedelta(days=random.randint(200, 550)),
+                    blockchain_hash=f"0x{drug_id.split('-')[1].upper()}batch001",
+                    qr_code_data=f"{drug_id.split('-')[1]}-2024-001|{drug_id}",
+                ),
+            )
+            batches[batch_id] = batch
 
-        batch_met, _ = Batch.objects.get_or_create(
-            id="BATCH-MET-001",
-            defaults=dict(
-                drug_id=metformin,
-                batch_number="MET-2024-001",
-                mfg_date=today - timedelta(days=200),
-                exp_date=today + timedelta(days=550),
-                blockchain_hash="0xMETbatch001",
-                qr_code_data="MET-2024-001|DRUG-MET-500",
-            ),
-        )
-
-        batch_amox, _ = Batch.objects.get_or_create(
-            id="BATCH-AMOX-001",
-            defaults=dict(
-                drug_id=amoxicillin,
-                batch_number="AMOX-2024-001",
-                mfg_date=today - timedelta(days=150),
-                exp_date=today + timedelta(days=300),
-                blockchain_hash="0xAMOXbatch001",
-                qr_code_data="AMOX-2024-001|DRUG-AMOX-250",
-            ),
-        )
-
-        batch_lisi, _ = Batch.objects.get_or_create(
-            id="BATCH-LISI-001",
-            defaults=dict(
-                drug_id=lisinopril,
-                batch_number="LISI-2024-001",
-                mfg_date=today - timedelta(days=120),
-                exp_date=today + timedelta(days=400),
-                blockchain_hash="0xLISIbatch001",
-                qr_code_data="LISI-2024-001|DRUG-LISI-10",
-            ),
-        )
-
-        # ========== 5. INVENTORY ==========
+        # ========== 5. INVENTORY (15 rows) ==========
         self.stdout.write("Creating inventory...")
 
-        inv1, _ = Inventory.objects.get_or_create(
-            id="INV-001",
-            defaults=dict(
-                location_id=hosp_mum,
-                drug_id=paracetamol,
-                batch_id=batch_pcm,
-                qty_on_hand=1200,
-                exp_date=batch_pcm.exp_date,
-            ),
-        )
+        locations = [hosp_mum, hosp_blr, hosp_delhi]
+        inv_counter = 1
+        for batch_id, batch in list(batches.items())[:15]:
+            location = locations[inv_counter % len(locations)]
+            Inventory.objects.get_or_create(
+                id=f"INV-{inv_counter:03d}",
+                defaults=dict(
+                    location_id=location,
+                    drug_id=batch.drug_id,
+                    batch_id=batch,
+                    qty_on_hand=random.randint(200, 2000),
+                    exp_date=batch.exp_date,
+                ),
+            )
+            inv_counter += 1
 
-        inv2, _ = Inventory.objects.get_or_create(
-            id="INV-002",
-            defaults=dict(
-                location_id=hosp_mum,
-                drug_id=metformin,
-                batch_id=batch_met,
-                qty_on_hand=800,
-                exp_date=batch_met.exp_date,
-            ),
-        )
-
-        inv3, _ = Inventory.objects.get_or_create(
-            id="INV-003",
-            defaults=dict(
-                location_id=hosp_blr,
-                drug_id=amoxicillin,
-                batch_id=batch_amox,
-                qty_on_hand=500,
-                exp_date=batch_amox.exp_date,
-            ),
-        )
-
-        inv4, _ = Inventory.objects.get_or_create(
-            id="INV-004",
-            defaults=dict(
-                location_id=hosp_blr,
-                drug_id=lisinopril,
-                batch_id=batch_lisi,
-                qty_on_hand=300,
-                exp_date=batch_lisi.exp_date,
-            ),
-        )
-
-        # ========== 6. ORDERS + ORDER ITEMS ==========
+        # ========== 6. ORDERS + ORDER ITEMS (15 orders) ==========
         self.stdout.write("Creating orders and order items...")
 
-        order1, _ = Order.objects.get_or_create(
-            id="ORD-001",
-            defaults=dict(
-                order_number="ORD-2024-0001",
-                from_location=hosp_mum,
-                to_location=vendor_delhi,
-                status="PENDING",
-                shipped_at=None,
-                delivered_at=None,
-                carrier_name="",
-                tracking_number="",
-                created_by=hosp_user,
-                created_at=timezone.now() - timedelta(days=5),
-            ),
-        )
+        order_statuses = ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"]
+        hospital_locations = [hosp_mum, hosp_blr, hosp_delhi]
+        vendor_locations = [vendor_delhi, vendor_mum]
 
-        order2, _ = Order.objects.get_or_create(
-            id="ORD-002",
-            defaults=dict(
-                order_number="ORD-2024-0002",
-                from_location=hosp_blr,
-                to_location=vendor_delhi,
-                status="SHIPPED",
-                shipped_at=timezone.now() - timedelta(days=2),
-                delivered_at=None,
-                carrier_name="BlueDart Express",
-                tracking_number="BD123456789",
-                created_by=hosp_user,
-                created_at=timezone.now() - timedelta(days=4),
-            ),
-        )
+        for order_num in range(1, 16):
+            order_id = f"ORD-{order_num:03d}"
+            from_loc = random.choice(hospital_locations)
+            to_loc = random.choice(vendor_locations)
+            status = random.choice(order_statuses)
+            created_days_ago = random.randint(5, 20)  # Changed from 1-20 to 5-20 for safe calculation
 
-        order3, _ = Order.objects.get_or_create(
-            id="ORD-003",
-            defaults=dict(
-                order_number="ORD-2024-0003",
-                from_location=hosp_mum,
-                to_location=vendor_delhi,
-                status="DELIVERED",
-                shipped_at=timezone.now() - timedelta(days=5),
-                delivered_at=timezone.now() - timedelta(days=2),
-                carrier_name="DHL Logistics",
-                tracking_number="DHL987654321",
-                created_by=hosp_user,
-                created_at=timezone.now() - timedelta(days=7),
-            ),
-        )
+            shipped_at = None
+            delivered_at = None
+            
+            if status in ["SHIPPED", "DELIVERED"]:
+                # Ensure shipped_at is safely between 1 and created_days_ago - 2
+                shipped_days_ago = random.randint(1, max(1, created_days_ago - 2))
+                shipped_at = timezone.now() - timedelta(days=shipped_days_ago)
+            
+            if status == "DELIVERED" and shipped_at:
+                # Ensure delivered_at is after shipped_at
+                delivered_days_ago = random.randint(1, max(1, shipped_days_ago - 1))
+                delivered_at = shipped_at - timedelta(days=delivered_days_ago)
 
-        # Order items
-        OrderItem.objects.get_or_create(
-            id="ORDITEM-001",
-            defaults=dict(
-                order_id=order1,
-                drug_id=paracetamol,
-                qty=200,
-            ),
-        )
-        OrderItem.objects.get_or_create(
-            id="ORDITEM-002",
-            defaults=dict(
-                order_id=order1,
-                drug_id=metformin,
-                qty=300,
-            ),
-        )
-        OrderItem.objects.get_or_create(
-            id="ORDITEM-003",
-            defaults=dict(
-                order_id=order2,
-                drug_id=amoxicillin,
-                qty=500,
-            ),
-        )
-        OrderItem.objects.get_or_create(
-            id="ORDITEM-004",
-            defaults=dict(
-                order_id=order3,
-                drug_id=lisinopril,
-                qty=300,
-            ),
-        )
+            order, _ = Order.objects.get_or_create(
+                id=order_id,
+                defaults=dict(
+                    order_number=f"ORD-2024-{order_num:04d}",
+                    from_location=from_loc,
+                    to_location=to_loc,
+                    status=status,
+                    shipped_at=shipped_at,
+                    delivered_at=delivered_at,
+                    carrier_name=random.choice(["BlueDart", "DHL", "FedEx", "Ecom Express", ""]),
+                    tracking_number=f"TRK{random.randint(100000000, 999999999)}" if status != "PENDING" else "",
+                    created_by=random.choice([hosp_user, hosp_user_blr]),
+                    created_at=timezone.now() - timedelta(days=created_days_ago),
+                ),
+            )
 
-        # ========== 7. CONSUMPTION RECORDS ==========
+            # Order items (2-4 items per order)
+            drugs_list = list(drugs.values())
+            num_items = random.randint(2, 4)
+            for item_idx in range(num_items):
+                OrderItem.objects.get_or_create(
+                    id=f"ORDITEM-{order_num:03d}-{item_idx + 1:02d}",
+                    defaults=dict(
+                        order_id=order,
+                        drug_id=random.choice(drugs_list),
+                        qty=random.randint(100, 1000),
+                    ),
+                )
+
+
+        # ========== 7. CONSUMPTION RECORDS (15 rows) ==========
         self.stdout.write("Creating consumption records...")
 
-        ConsumptionRecord.objects.get_or_create(
-            id="CONS-001",
-            defaults=dict(
-                recorded_by=hosp_user,
-                drug_id=paracetamol,
-                location_id=hosp_mum,
-                batch_id=batch_pcm,
-                qty_consumed=150,
-                consumption_date=today,
-            ),
-        )
+        drugs_list = list(drugs.values())
+        batches_list = list(batches.values())
 
-        ConsumptionRecord.objects.get_or_create(
-            id="CONS-002",
-            defaults=dict(
-                recorded_by=hosp_user,
-                drug_id=metformin,
-                location_id=hosp_mum,
-                batch_id=batch_met,
-                qty_consumed=80,
-                consumption_date=today - timedelta(days=1),
-            ),
-        )
+        for cons_num in range(1, 16):
+            ConsumptionRecord.objects.get_or_create(
+                id=f"CONS-{cons_num:03d}",
+                defaults=dict(
+                    recorded_by=random.choice([hosp_user, hosp_user_blr]),
+                    drug_id=random.choice(drugs_list),
+                    location_id=random.choice(hospital_locations),
+                    batch_id=random.choice(batches_list),
+                    qty_consumed=random.randint(10, 200),
+                    consumption_date=today - timedelta(days=random.randint(0, 15)),
+                ),
+            )
 
-        # ========== 8. ALERTS ==========
+        # ========== 8. ALERTS (15 rows) ==========
         self.stdout.write("Creating alerts...")
 
-        Alert.objects.get_or_create(
-            id="ALERT-001",
-            defaults=dict(
-                type="LOW_STOCK",
-                location_id=hosp_blr,
-                drug_id=lisinopril,
-                batch_id=batch_lisi,
-                message="Lisinopril stock below reorder point at Fortis Bengaluru.",
-                is_read=False,
-                created_at=timezone.now() - timedelta(hours=6),
-            ),
-        )
+        alert_types = ["LOW_STOCK", "EXPIRY_WARNING", "DELAYED_SHIPMENT", "QUALITY_CHECK"]
+        alert_messages = {
+            "LOW_STOCK": "Stock below reorder point at {location}.",
+            "EXPIRY_WARNING": "Batch expiring in 30 days at {location}.",
+            "DELAYED_SHIPMENT": "Shipment delayed at {location}.",
+            "QUALITY_CHECK": "Quality check pending for {drug} at {location}.",
+        }
 
-        Alert.objects.get_or_create(
-            id="ALERT-002",
-            defaults=dict(
-                type="EXPIRY_WARNING",
-                location_id=hosp_blr,
-                drug_id=amoxicillin,
-                batch_id=batch_amox,
-                message="Amoxicillin batch expiring in 30 days at Fortis Bengaluru.",
-                is_read=False,
-                created_at=timezone.now() - timedelta(days=2),
-            ),
-        )
+        for alert_num in range(1, 16):
+            alert_type = random.choice(alert_types)
+            location = random.choice(hospital_locations)
+            drug = random.choice(drugs_list)
+            batch = random.choice(batches_list)
 
-        # ========== 9. FORECASTS ==========
+            message = alert_messages[alert_type].format(location=location.name, drug=drug.name)
+
+            Alert.objects.get_or_create(
+                id=f"ALERT-{alert_num:03d}",
+                defaults=dict(
+                    type=alert_type,
+                    location_id=location,
+                    drug_id=drug,
+                    batch_id=batch,
+                    message=message,
+                    is_read=random.choice([True, False]),
+                    created_at=timezone.now() - timedelta(days=random.randint(0, 10), hours=random.randint(0, 23)),
+                ),
+            )
+
+        # ========== 9. FORECASTS (15 rows) ==========
         self.stdout.write("Creating forecasts...")
 
-        Forecast.objects.get_or_create(
-            id="FORECAST-001",
-            defaults=dict(
-                drug_id=paracetamol,
-                location_id=hosp_mum,
-                forecast_date=today + timedelta(days=30),
-                predicted_qty=250,
-            ),
-        )
+        for forecast_num in range(1, 16):
+            Forecast.objects.get_or_create(
+                id=f"FORECAST-{forecast_num:03d}",
+                defaults=dict(
+                    drug_id=random.choice(drugs_list),
+                    location_id=random.choice(hospital_locations),
+                    forecast_date=today + timedelta(days=random.randint(7, 90)),
+                    predicted_qty=random.randint(100, 500),
+                ),
+            )
 
-        Forecast.objects.get_or_create(
-            id="FORECAST-002",
-            defaults=dict(
-                drug_id=metformin,
-                location_id=hosp_blr,
-                forecast_date=today + timedelta(days=30),
-                predicted_qty=180,
-            ),
-        )
-
-        # ========== 10. BLOCKCHAIN TRANSACTIONS ==========
+        # ========== 10. BLOCKCHAIN TRANSACTIONS (15 rows) ==========
         self.stdout.write("Creating blockchain transactions...")
 
-        BlockchainTransaction.objects.get_or_create(
-            id="BTX-001",
-            defaults=dict(
-                batch_id=batch_pcm,
-                tx_hash="0xPCMbatch001",
-                tx_type="BATCH_CREATION",
-                created_at=batch_pcm.mfg_date,
-            ),
-        )
+        tx_types = ["BATCH_CREATION", "ORDER_SHIPMENT", "DELIVERY_CONFIRMED", "QUALITY_VERIFIED"]
+        batches_list = list(batches.values())
 
-        BlockchainTransaction.objects.get_or_create(
-            id="BTX-002",
-            defaults=dict(
-                batch_id=batch_met,
-                tx_hash="0xMETbatch001",
-                tx_type="BATCH_CREATION",
-                created_at=batch_met.mfg_date,
-            ),
-        )
+        for btx_num in range(1, 16):
+            batch = batches_list[btx_num - 1] if btx_num <= len(batches_list) else random.choice(batches_list)
 
-        BlockchainTransaction.objects.get_or_create(
-            id="BTX-003",
-            defaults=dict(
-                batch_id=batch_amox,
-                tx_hash="0xAMOXbatch001",
-                tx_type="BATCH_CREATION",
-                created_at=batch_amox.mfg_date,
-            ),
-        )
+            BlockchainTransaction.objects.get_or_create(
+                id=f"BTX-{btx_num:03d}",
+                defaults=dict(
+                    batch_id=batch,
+                    tx_hash=f"0x{batch.drug_id.id.split('-')[1].upper()}batch{btx_num:03d}",
+                    tx_type=random.choice(tx_types),
+                    created_at=batch.mfg_date + timedelta(days=random.randint(0, 10)),
+                ),
+            )
 
-        BlockchainTransaction.objects.get_or_create(
-            id="BTX-004",
-            defaults=dict(
-                batch_id=batch_lisi,
-                tx_hash="0xLISIbatch001",
-                tx_type="BATCH_CREATION",
-                created_at=batch_lisi.mfg_date,
-            ),
-        )
-
-        self.stdout.write(self.style.SUCCESS("✅ Seeding completed successfully."))
+        self.stdout.write(self.style.SUCCESS("✅ Seeding completed successfully with 15 rows per section!"))

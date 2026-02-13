@@ -118,7 +118,6 @@ export default function OrdersOverview() {
     return (
         <DashboardLayout
         dashboardTitle="Admin Dashboard"
-        dashboardSubtitle="System-wide orders overview."
         userRole="System Owner"
         userName="John Administrator"
         >

@@ -2,7 +2,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DoughnutChart({ data, title }) {
-    const COLORS = ['#10b981', '#ef4444'];
+    const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6'];
 
     return (
         <div className="bg-white rounded-xl shadow-sm p-6">

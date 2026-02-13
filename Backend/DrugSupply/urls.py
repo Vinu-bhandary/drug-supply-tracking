@@ -19,11 +19,13 @@ from django.urls import path
 from MasterApp.views import router, router1
 from ninja import NinjaAPI
 from SupplyApp.views import admin_router
+from InventoryApp.views import invRouter
 
 api = NinjaAPI()
 api.add_router('/seed/', router)
 api.add_router('/seed/', admin_router)
 api.add_router('/auth/', router1)
+api.add_router('/data/', invRouter)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

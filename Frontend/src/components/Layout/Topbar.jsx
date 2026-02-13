@@ -26,7 +26,7 @@ export default function Topbar({ title, subtitle, userRole, userName }) {
             <div className="flex items-center gap-6">
 
 
-                <div className="relative" ref={notifRef}>
+                {/* <div className="relative" ref={notifRef}>
                 <button
                     onClick={() => setNotificationsOpen(!notificationsOpen)}
                     className="relative text-gray-600 hover:text-gray-900"
@@ -46,7 +46,7 @@ export default function Topbar({ title, subtitle, userRole, userName }) {
                     </div>
                     </div>
                 )}
-                </div>
+                </div> */}
 
 
                 <AvatarButton />

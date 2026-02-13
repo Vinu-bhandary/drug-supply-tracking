@@ -3,7 +3,7 @@ import DashboardLayout from '../../components/Layout/DashboardLayout';
 import StatCard from '../../components/Common/StatCard';
 import LineChart from '../../components/Charts/LineChart';
 import DoughnutChart from '../../components/Charts/DoughnutChart';
-import OrdersTable from '../../components/Tables/OrdersTable';
+import GenericTable from '../../components/Tables/GenericTable';
 import { adminData } from '../../data/adminData';
 
 export default function AdminDashboard() {
@@ -17,21 +17,14 @@ export default function AdminDashboard() {
     })
     const [data, setData] = useState(adminData);
 
-    useEffect(() => {
+    useEffect(() => async () => {
+        const adminData = await fetch('http://127.0.0.1:8000/api/seed/dashboard').then(res => res.json());
         setData(adminData);
     }, []);
 
-    const chartData = [
-        { name: 'Oct', orders: 450, value: 150000 },
-        { name: 'Nov', orders: 620, value: 195000 },
-        { name: 'Dec', orders: 840, value: 260000 },
-        { name: 'Jan', orders: 700, value: 220000 },
-    ];
+    const chartData = data.chartData || [];
 
-    const statusData = [
-        { name: 'Active', value: 1100 },
-        { name: 'Low Stock', value: 147 },
-    ];
+    const statusData = data.statusData || [];
 
     return (
         <DashboardLayout
@@ -57,10 +50,10 @@ export default function AdminDashboard() {
             <div className="lg:col-span-2">
             <LineChart data={chartData} title="Global Orders Trend" />
             </div>
-            <DoughnutChart data={statusData} title="Drug Catalog Status" />
+            <DoughnutChart data={statusData} title="Order Status" />
         </div>
+        
 
-        <OrdersTable data={data.orders} />
         </DashboardLayout>
     );
 }

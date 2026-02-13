@@ -5,15 +5,15 @@ import DropdownButton from '../Common/DropdownButton';
 
 export default function OrdersTable({ data }) {
     const columns = [
-        { key: 'orderId', label: 'Order ID' },
-        { key: 'drug', label: 'Drug Name' },
-        { key: 'quantity', label: 'Quantity' },
+        { key: "order_number", label: "Order ID" },
+        { key: "from_location_id", label: "From" },
+        { key: "to_location_id", label: "To" },
         {
         key: 'status',
         label: 'Status',
         render: (status) => <Badge text={status} type={status.toLowerCase()} />
         },
-        { key: 'date', label: 'Date' },
+        { key: "created_at", label: "Created" },
     ];
 
     const actions = (row) => (

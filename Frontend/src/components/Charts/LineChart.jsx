@@ -13,7 +13,7 @@ export default function LineChart({ data, title }) {
             <Tooltip />
             <Legend />
             <Line type="monotone" dataKey="orders" stroke="#3b82f6" />
-            <Line type="monotone" dataKey="value" stroke="#f59e0b" />
+
             </RechartsLineChart>
         </ResponsiveContainer>
         </div>

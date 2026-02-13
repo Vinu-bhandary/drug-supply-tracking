@@ -32,7 +32,7 @@ export default function DropdownButton({ label, items = [] }) {
                     <button
                     onClick={item.onClick}
                     className={`w-full text-left px-4 py-2 hover:bg-gray-50 ${
-                        item.danger ? 'text-red-600' : 'text-gray-700'
+                        item.danger ? 'text-red-600' : 'text-gray-100'
                     }`}
                     >
                     {item.label}

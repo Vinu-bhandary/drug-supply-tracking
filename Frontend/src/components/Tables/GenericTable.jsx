@@ -24,7 +24,7 @@ export default function GenericTable({ columns, data, actions }) {
                 <tr key={row.id || idx} className="border-b border-gray-100 hover:bg-gray-50">
                     {columns.map(col => (
                     <td key={col.key} className="px-6 py-3 text-gray-700">
-                        {col.render ? col.render(row[col.key], row) : row[col.key]}
+                        {col.date ? <Badge text={new Date(row[col.key]).toLocaleDateString('en-IN')} /> : col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                     ))}
                     {actions && (
