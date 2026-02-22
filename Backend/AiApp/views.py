@@ -21,53 +21,92 @@ def delete_forecast(forecast_id):
     return obj.delete()
 
 
+from django.db import models
+from AiApp.models import Forecast
+from MasterApp.models import Drug, Location
+from InventoryApp.models import ConsumptionRecord  # app label as in your project
 
 
-#-------------------------------------
 import datetime
-
 import numpy as np
 import pandas as pd
 from django.db.models import Sum
-from sklearn.ensemble import RandomForestRegressor
-from django.utils import timezone
+from xgboost import XGBRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_squared_error
 
-from InventoryApp.models import ConsumptionRecord
-from .models import Forecast
+DEFAULT_MAX_CAPACITY = 80  # units per day, demo only
+
+
+def _load_base_dataframe():
+    """
+    Load data from ConsumptionRecord and aggregate qty_consumed
+    per (drug, location, date) with basic name/metadata.
+    """
+    qs = (
+        ConsumptionRecord.objects
+        .values(
+            "drug_id",
+            "drug_id__name",
+            "location_id",
+            "location_id__name",
+            "consumption_date",
+        )
+        .annotate(total_qty=Sum("qty_consumed"))
+        .order_by("drug_id", "location_id", "consumption_date")
+    )
+
+    if not qs:
+        return None
+
+    df = pd.DataFrame.from_records(qs)
+    if df.empty:
+        return None
+
+    df.rename(
+        columns={
+            "consumption_date": "date",
+            "drug_id__name": "drug_name",
+            "location_id__name": "location_name",
+        },
+        inplace=True,
+    )
+    df["date"] = pd.to_datetime(df["date"])
+    # dummy columns to keep meta structure (optional)
+    df["drug_category"] = ""
+    df["drug_form"] = ""
+    df["location_region"] = ""
+    df["location_country"] = ""
+    return df
 
 
 def _build_training_dataframe(start_date=None, end_date=None):
-
-    qs = ConsumptionRecord.objects.all()
+    df = _load_base_dataframe()
+    if df is None or df.empty:
+        return None, None
 
     if start_date:
-        qs = qs.filter(consumption_date__gte=start_date)
+        df = df[df["date"] >= pd.to_datetime(start_date)]
     if end_date:
-        qs = qs.filter(consumption_date__lte=end_date)
+        df = df[df["date"] <= pd.to_datetime(end_date)]
 
+    df_model = df[
+        [
+            "drug_id",
+            "location_id",
+            "date",
+            "total_qty",
+        ]
+    ].copy()
+    if df_model.empty:
+        return None, None
 
-    data = (
-        qs.values("drug_id", "location_id", "consumption_date")
-            .annotate(total_qty=Sum("qty_consumed"))
-            .order_by("drug_id", "location_id", "consumption_date")
-    )
+    df_model["year"] = df_model["date"].dt.year
+    df_model["month"] = df_model["date"].dt.month
+    df_model["day"] = df_model["date"].dt.day
+    df_model["dayofweek"] = df_model["date"].dt.dayofweek
 
-    if not data:
-        return None
-
-    df = pd.DataFrame(list(data))
-    df.rename(columns={"consumption_date": "date"}, inplace=True)
-
-
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-    df["day"] = df["date"].dt.day
-    df["dayofweek"] = df["date"].dt.dayofweek
-
-
-    df = df.sort_values(["drug_id", "location_id", "date"])
-
+    df_model = df_model.sort_values(["drug_id", "location_id", "date"])
 
     def add_lags(group):
         group = group.copy()
@@ -76,41 +115,80 @@ def _build_training_dataframe(start_date=None, end_date=None):
         group["rolling_7_mean"] = group["total_qty"].rolling(window=7).mean()
         return group
 
-    df = df.groupby(["drug_id", "location_id"], group_keys=False).apply(add_lags)
+    df_model = (
+        df_model.groupby(["drug_id", "location_id"], group_keys=False)
+        .apply(add_lags)
+    )
 
+    df_model = df_model.dropna(subset=["lag_1", "lag_7", "rolling_7_mean"])
 
-    df = df.dropna(subset=["lag_1", "lag_7", "rolling_7_mean"])
-
-    return df
-
-
-def train_random_forest_model(df):
-    feature_cols = [
-        "drug_id", "location_id",
-        "year", "month", "day", "dayofweek",
-        "lag_1", "lag_7", "rolling_7_mean",
+    meta_cols = [
+        "drug_id",
+        "drug_name",
+        "drug_category",
+        "drug_form",
+        "location_id",
+        "location_name",
+        "location_region",
+        "location_country",
     ]
-    X = df[feature_cols]
-    y = df["total_qty"]
+    df_meta = df[meta_cols].drop_duplicates()
 
-    model = RandomForestRegressor(
-        n_estimators=300,
-        max_depth=12,
+    return df_model, df_meta
+
+
+def _train_xgb_model(df_model):
+    feature_cols = [
+        "drug_id",
+        "location_id",
+        "year",
+        "month",
+        "day",
+        "dayofweek",
+        "lag_1",
+        "lag_7",
+        "rolling_7_mean",
+    ]
+    X = df_model[feature_cols]
+    y = df_model["total_qty"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, shuffle=False
+    )
+
+    model = XGBRegressor(
+        objective="reg:squarederror",
+        n_estimators=400,
+        max_depth=8,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
         random_state=42,
         n_jobs=-1,
     )
-    model.fit(X, y)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+    print("Model evaluation on hold-out set:")
+    print(f"  RMSE: {rmse:.2f}")
+    print(f"  R²:   {r2:.3f}")
 
     return model, feature_cols
 
 
 def _create_future_frame_for_pair(drug_id, location_id, last_date, periods=7):
-    future_dates = [last_date + datetime.timedelta(days=i) for i in range(1, periods + 1)]
-    fdf = pd.DataFrame({
-        "drug_id": [drug_id] * periods,
-        "location_id": [location_id] * periods,
-        "date": pd.to_datetime(future_dates),
-    })
+    future_dates = [
+        last_date + datetime.timedelta(days=i) for i in range(1, periods + 1)
+    ]
+    fdf = pd.DataFrame(
+        {
+            "drug_id": [drug_id] * periods,
+            "location_id": [location_id] * periods,
+            "date": pd.to_datetime(future_dates),
+        }
+    )
     fdf["year"] = fdf["date"].dt.year
     fdf["month"] = fdf["date"].dt.month
     fdf["day"] = fdf["date"].dt.day
@@ -118,33 +196,43 @@ def _create_future_frame_for_pair(drug_id, location_id, last_date, periods=7):
     return fdf
 
 
-def generate_forecasts_for_range(days_ahead=7):
-    df = _build_training_dataframe()
-    if df is None or df.empty:
+def _estimate_wastage(predicted_qty, max_capacity=DEFAULT_MAX_CAPACITY):
+    if predicted_qty >= max_capacity:
+        return 0
+    return max_capacity - predicted_qty
+
+
+def generate_and_store_forecasts(days_ahead=7):
+    """
+    Train from ConsumptionRecord and store Forecast rows.
+    Call this from a view, shell, or background task.
+    """
+    df_model, df_meta = _build_training_dataframe()
+    if df_model is None or df_model.empty:
+        print("No training data after feature engineering.")
         return 0
 
+    model, feature_cols = _train_xgb_model(df_model)
 
-    model, feature_cols = train_random_forest_model(df)
-
-    created_count = 0
-
-
-    pairs = df[["drug_id", "location_id"]].drop_duplicates()
+    total_rows = 0
+    pairs = df_model[["drug_id", "location_id"]].drop_duplicates()
 
     for _, row in pairs.iterrows():
         d_id = row["drug_id"]
         l_id = row["location_id"]
 
-
-        sub = df[(df["drug_id"] == d_id) & (df["location_id"] == l_id)].copy()
+        sub = df_model[
+            (df_model["drug_id"] == d_id)
+            & (df_model["location_id"] == l_id)
+        ].copy()
         if sub.empty:
             continue
 
         last_date = sub["date"].max()
 
-
-        future = _create_future_frame_for_pair(d_id, l_id, last_date, periods=days_ahead)
-
+        future = _create_future_frame_for_pair(
+            d_id, l_id, last_date, periods=days_ahead
+        )
 
         last_row = sub.sort_values("date").iloc[-1]
         future["lag_1"] = last_row["total_qty"]
@@ -154,22 +242,30 @@ def generate_forecasts_for_range(days_ahead=7):
         future["lag_7"] = rolling_7
         future["rolling_7_mean"] = rolling_7
 
-
         X_future = future[feature_cols]
         preds = model.predict(X_future)
-        future["predicted_qty"] = np.maximum(preds.round().astype(int), 0)
+        future["predicted_qty"] = np.maximum(
+            np.round(preds).astype(int), 0
+        )
+        future["estimated_wastage"] = future["predicted_qty"].apply(
+            _estimate_wastage
+        )
 
+        future = future.merge(
+            df_meta,
+            on=["drug_id", "location_id"],
+            how="left",
+        )
 
         for _, fr in future.iterrows():
-            Forecast.objects.update_or_create(
-                id=f"{d_id}_{l_id}_{fr['date'].date()}",
-                defaults={
-                    "drug_id_id": d_id,
-                    "location_id_id": l_id,
-                    "forecast_date": fr["date"].date(),
-                    "predicted_qty": int(fr["predicted_qty"]),
-                },
+            Forecast.objects.create(
+                drug_id=Drug.objects.get(id=int(fr["drug_id"])),
+                location_id=Location.objects.get(id=int(fr["location_id"])),
+                forecast_date=fr["date"].date(),
+                predicted_qty=int(fr["predicted_qty"]),
+                estimated_wastage=int(fr["estimated_wastage"]),
             )
-            created_count += 1
+            total_rows += 1
 
-    return created_count
+    print(f"Total forecast rows stored: {total_rows}")
+    return total_rows
