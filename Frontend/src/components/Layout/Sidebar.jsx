@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Sidebar() {
     const navigate = useNavigate();
-    const [activeItem, setActiveItem] = useState('dashboard');
+    const location = useLocation();
 
     const user = localStorage.getItem('role');
 
@@ -17,19 +16,19 @@ export default function Sidebar() {
 
     const vendorMenu = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/vendor/dashboard' },
+        { id: 'inventory', label: 'Inventory', icon: '📦', path: '/vendor/inventory' },
         { id: 'products', label: 'Batches', icon: '📦', path: '/vendor/batches' },
         { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/vendor/orders' },
         { id: 'shipments', label: 'Shipments', icon: '🚚', path: '/vendor/shipments' },
-        // { id: 'analytics', label: 'Sales Analytics', icon: '📈', path: '/vendor/analytics' },
     ];
 
     const hospitalMenu = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/hospital/dashboard' },
         { id: 'inventory', label: 'Inventory', icon: '📦', path: '/hospital/inventory' },
         { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/hospital/orders' },
+        { id: 'reports', label: 'Consumption Records', icon: '📈', path: '/hospital/reports' },
         { id: 'ai', label: 'AI Predictions', icon: '🤖', path: '/hospital/predictions' },
         { id: 'alerts', label: 'Alerts', icon: '🔔', path: '/hospital/alerts' },
-        { id: 'reports', label: 'Reports', icon: '📈', path: '/hospital/reports' },
     ];
 
     let menuItems = adminMenu;
@@ -41,7 +40,6 @@ export default function Sidebar() {
     }
 
     const handleMenuClick = (item) => {
-        setActiveItem(item.id);
         navigate(item.path);
     };
 
@@ -61,8 +59,8 @@ export default function Sidebar() {
                     key={item.id}
                     onClick={() => handleMenuClick(item)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                    activeItem === item.id
-                        ? 'bg-blue-600 text-white'
+                        location.pathname === item.path
+                        ? '!bg-blue-600 text-white'
                         : 'text-gray-300 hover:bg-gray-800'
                     }`}
                 >

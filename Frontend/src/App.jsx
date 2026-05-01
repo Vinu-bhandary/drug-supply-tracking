@@ -6,6 +6,7 @@ import Forecast from './pages/Hospital/Forecast';
 import HospitalAlerts from './pages/Hospital/HospitalAlerts';
 import HospitalReports from './pages/Hospital/HospitalReports';
 import VendorDashboard from './pages/Vendor/VendorDashboard';
+import VendorInventory from './pages/Vendor/VendorInventory';
 import VendorOrders from './pages/Vendor/VendorOrders';
 import Shipments from './pages/Vendor/Shipments';
 import Batches from './pages/Vendor/Batches';
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/hospital/reports" element={<HospitalReports />} />
 
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+        <Route path="/vendor/inventory" element={<VendorInventory />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/shipments" element={<Shipments />} />
         <Route path="/vendor/batches" element={<Batches />} />

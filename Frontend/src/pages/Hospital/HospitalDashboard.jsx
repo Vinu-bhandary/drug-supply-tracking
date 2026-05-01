@@ -56,9 +56,9 @@ export default function HospitalDashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2">
-          <LineChart data={chartData} title="Orders Trend (Last 4 Months)" />
+          <LineChart data={chartData} title="Orders Trend" />
         </div>
-        <DoughnutChart data={statusData} title="Inventory Status" />
+        <DoughnutChart data={statusData} title="Orders Status" />
       </div>
 
 

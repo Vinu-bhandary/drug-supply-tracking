@@ -4,12 +4,11 @@ import GenericTable from "../../components/Tables/GenericTable";
 import DropdownButton from "../../components/common/DropdownButton";
 import EditForm from "../../components/Common/EditForm";
 import InputForm from "../../components/common/InputForm";
-import ConsumptionForm from "./ConsumptionForm";
 
 export default function HospitalInventory() {
     const user = localStorage.getItem('role');
     useEffect(() => {
-        if (user !== 'hospital') {
+        if (user !== 'vendor') {
         alert('You are not authorized to access this page.');
         window.location.href = '/';
         return;
@@ -18,11 +17,12 @@ export default function HospitalInventory() {
 
     
     const [data, setData] = useState([]);
+    const [drugs, setDrugs] = useState([]);
+    const [batches, setBatches] = useState([]);
     const [editData, setEditData] = useState(false);
     const [selectedData, setSelectedData] = useState({});
     const [openForm, setOpenForm] = useState(false);
-    const [orders, setOrders] = useState([]);
-    const [comsumptionFormOpen, setConsumptionFormOpen] = useState(false);
+
     
     const location_id = localStorage.getItem('location_id');
 
@@ -33,25 +33,37 @@ export default function HospitalInventory() {
             });
             const result = await response.json();
             setData(result);
-            const res = await fetch(`http://127.0.0.1:8000/api/seed/orders/${location_id}/${user}`).then(res => res.json());
-            setOrders(res);
+        const drugsResponse = await fetch('http://localhost:8000/api/seed/drugs', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const drugsResult = await drugsResponse.json();
+        setDrugs(drugsResult);
+        const batchesResponse = await fetch('http://localhost:8000/api/seed/batches', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const batchesResult = await batchesResponse.json();
+        setBatches(batchesResult);
         }, []);
 
-
-
-
+    var drugOptions = drugs.map(d => ({ label: d.name, value: d.id }));
+    drugOptions.unshift({ label: '--Select a drug--', value: '' });
     
-    
-    const deliveredOrders = orders.filter((o) => o.status === "DELIVERED");
-    const deliveredOrdersList = deliveredOrders
-        .map((o) => o.order_number)
-        .filter((value, index, self) => self.indexOf(value) === index)
-        .map((o) => ({ label: o, value: o }));
-    deliveredOrdersList.unshift({label: '-- Select Order ---', value: ''});
-    
+    var batchOptions = batches.map(b => ({ label: b.id, value: b.id }));
+    batchOptions.unshift({ label: '--Select a batch--', value: '' });
+
+    const handleDrugChange = (value) => {
+        batchOptions = batches.filter(b => b.drug_id === value).map(b => ({ label: b.id, value: b.id }));
+        batchOptions.unshift({ label: '--Select a batch--', value: '' });
+    }
+
 
     const fieldValues = [
-        { label: 'Order Number', name: 'order_number', type: 'select', options: deliveredOrdersList },
+        { label: 'Location ID', name: 'location_id', type: 'text', value: location_id, disabled: true },
+        { label: 'Drug ID', name: 'drug_id', type: 'select', options: drugOptions, changeHandle: handleDrugChange },
+        { label: 'Batch ID', name: 'batch_id', type: 'select', options: batchOptions },
+        { label: 'Quantity on Hand', name: 'qty_on_hand', type: 'number' },
     ];
 
     const editFieldValues = [
@@ -63,18 +75,19 @@ export default function HospitalInventory() {
         { label: 'Expiration Date', name: 'exp_date', type: 'date' },
     ];
 
-    const handleFormSubmit = async (formData) => {;
-        const response = await fetch(`http://localhost:8000/api/data/inventory/${location_id}`, {
+    const handleFormSubmit = async (formData) => {
+        console.log(formData);
+        const response = await fetch(`http://localhost:8000/api/data/inventory/vendor/${location_id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData),
         });
         const result = await response.json();
-        if (result.ok) {
-            alert(result.message);
+        if (response.ok) {
+            alert("Inventory item created successfully.");
         }
         else {
-            alert(result.detail);
+            alert("Failed to create inventory item.");
         }
         setOpenForm(false);
     };
@@ -97,19 +110,17 @@ export default function HospitalInventory() {
         setEditData(true);
     }
 
-    const startConsumption = (row) => {
-        setSelectedData(row);
-        setConsumptionFormOpen(true);
-    }
-
     const actions = (row) => (
-        <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() => startConsumption(row)}>
-            + Record Consumption
-        </button>
+        <DropdownButton
+        label="⋯"
+        items={[
+            { label: "Edit", onClick: () => editClick(row) },
+        ]}
+        />
     );
 
     return (
-        <DashboardLayout dashboardTitle="Hospital Inventory" dashboardSubtitle="Manage your hospital's medical supplies and equipment." userRole="Hospital Admin" userName="John Doe">
+        <DashboardLayout dashboardTitle="Vendor Inventory" dashboardSubtitle="Manage your warehouse's medical supplies and equipment." userRole="Vendor Admin" userName="John Doe">
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h2 className="text-xl font-semibold text-slate-900">Drug Management</h2>
@@ -117,13 +128,6 @@ export default function HospitalInventory() {
                         Manage the inventory.
                     </p>
                 </div>
-                {comsumptionFormOpen && <div className="absolute top-20 left-1/2 z-50 w-11/12 max-w-md -translate-x-1/2 rounded-lg bg-white p-6 shadow-lg">
-                    <div className="flex flex-row gap-4">
-                        <h3 className="mb-4 text-lg font-semibold text-slate-900">Record Consumption</h3>
-                        <button className="cursor-pointer text-white ml-auto" onClick={() => setConsumptionFormOpen(prev => !prev)}>X</button>
-                    </div>
-                    <ConsumptionForm row={selectedData}/>
-                    </div>}
                 <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700" onClick={() =>setOpenForm(prev => !prev)}>
                     + Add Inventory Items
                 </button>

@@ -8,9 +8,43 @@ from django.contrib.auth.hashers import check_password, make_password
 import json
 from django.utils import timezone
 import datetime
+from dateutil.relativedelta import relativedelta
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 router = Router()
 router1 = Router()
+
+
+def get_last_12_months_orders(qs):
+    now = datetime.datetime.now()
+    start_date = now - relativedelta(months=11)
+
+    data = (
+        qs.filter(created_at__gte=start_date)
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+
+    data_map = {
+        item['month'].strftime("%Y-%m"): item['count']
+        for item in data
+    }
+
+    chart_data = []
+
+    for i in range(11, -1, -1):
+        target_date = now - relativedelta(months=i)
+        key = target_date.strftime("%Y-%m")
+
+        chart_data.append({
+            "name": target_date.strftime("%b %Y"),
+            "orders": data_map.get(key, 0)
+        })
+
+    return chart_data
 
 
 @router1.post("/login", response={200:SuccessResponse, 400:ErrorResponse})
@@ -116,6 +150,10 @@ def list_users(request):
         )
     return user_list
 
+@router.get("/vendors/", response=list[LocationOut])
+def list_vendors(request):
+    return Location.objects.filter(type="Vendor")                               
+
 @router.post("/users/", response=SuccessResponse)
 def create_user(request, payload: UserCreate):
     loc = Location.objects.get(id=payload.location_id)
@@ -161,25 +199,6 @@ def dashboard(request):
     total_hospitals = Location.objects.filter(type="Hospital").count()
     total_vendors = Location.objects.filter(type="Vendor").count()
     total_drugs = Drug.objects.count()
-    recent_orders = Order.objects.order_by('-created_at')[:10]
-
-    rec_orders = []
-    for o in recent_orders:
-        rec_orders.append(
-            {
-                "id": o.id,
-                "order_number": o.order_number,
-                "from_location_id": o.from_location.name,
-                "to_location_id": o.to_location.name,
-                "status": o.status,
-                "shipped_at": o.shipped_at.strftime("%d-%m-%Y") if o.shipped_at else None,
-                "delivered_at": o.delivered_at.strftime("%d-%m-%Y") if o.delivered_at else None,
-                "carrier_name": o.carrier_name,
-                "tracking_number": o.tracking_number,
-                "created_by_id": o.created_by.id if o.created_by else None,
-                "created_at": o.created_at.strftime("%d-%m-%Y") if o.created_at else None,
-            }
-        )
 
     return {
         "stats": [
@@ -188,25 +207,12 @@ def dashboard(request):
             { "id": 3, "label": 'Total Vendors', "value": total_vendors, "icon": '🏬', "color": 'orange'},
             { "id": 4, "label": 'Total Drugs', "value": total_drugs, "icon": '💊', "color": 'red'},
         ],
-        "recent_orders": rec_orders,
-        "chartData": [
-            {"name": "January", "orders": Order.objects.filter(created_at__month=1).count()},
-            {"name": "February", "orders": Order.objects.filter(created_at__month=2).count()},
-            {"name": "March", "orders": Order.objects.filter(created_at__month=3).count()},
-            {"name": "April", "orders": Order.objects.filter(created_at__month=4).count()},
-            {"name": "May", "orders": Order.objects.filter(created_at__month=5).count()},
-            {"name": "June", "orders": Order.objects.filter(created_at__month=6).count()},
-            {"name": "July", "orders": Order.objects.filter(created_at__month=7).count()},
-            {"name": "August", "orders": Order.objects.filter(created_at__month=8).count()},
-            {"name": "September", "orders": Order.objects.filter(created_at__month=9).count()},
-            {"name": "October", "orders": Order.objects.filter(created_at__month=10).count()},
-            {"name": "November", "orders": Order.objects.filter(created_at__month=11).count()},
-            {"name": "December", "orders": Order.objects.filter(created_at__month=12).count()},
-        ],
+        "chartData": get_last_12_months_orders(Order.objects.all()),
         "statusData": [
             {"name": "Shipped", "value": Order.objects.filter(status="SHIPPED").count()},
-            {"name": "Delivered", "value": Order.objects.filter(status="DELIVERED").count()},
+            {"name": "Delivered", "value": Order.objects.filter(status="DELIVERED").count()+Order.objects.filter(status="IN-INVENTORY").count()},
             {"name": "Pending", "value": Order.objects.filter(status="PENDING").count()},
+            {"name": "Cancelled", "value": Order.objects.filter(status="CANCELLED").count()},
         ]
     }
 
@@ -225,7 +231,7 @@ def hospDashboard(request,loc_id:str):
             pending+=1
         elif ord.status == "SHIPPED":
             shipped+=1
-        elif ord.status == "DELIVERED":
+        elif ord.status == "DELIVERED" or ord.status == "IN-INVENTORY":
             delivered+=1
         elif ord.status == "CANCELLED":
             cancelled+=1
@@ -235,24 +241,12 @@ def hospDashboard(request,loc_id:str):
     
     return {
         "stats": [
-            { "id": 1, "label": 'Total orders', "value": Order.objects.filter(from_location = loc_id).count(), "icon": '', "color": 'blue'},
+            { "id": 1, "label": 'Total orders', "value": orders.count(), "icon": '', "color": 'blue'},
             { "id": 2, "label": 'Total drugs', "value": Inventory.objects.filter(location_id = loc_id).count(), "icon": '🏥', "color": 'green'},
             { "id": 3, "label": 'Near expiry', "value": exp, "icon": '🏬', "color": 'orange'},
+            { "id": 4, "label": 'To Be Added Inventory', "value": orders.filter(status="DELIVERED").count(), "icon": '💊', "color": 'red'},
         ],
-        "chartData": [
-            {"name": "January", "orders": Order.objects.filter(created_at__month=1).count()},
-            {"name": "February", "orders": Order.objects.filter(created_at__month=2).count()},
-            {"name": "March", "orders": Order.objects.filter(created_at__month=3).count()},
-            {"name": "April", "orders": Order.objects.filter(created_at__month=4).count()},
-            {"name": "May", "orders": Order.objects.filter(created_at__month=5).count()},
-            {"name": "June", "orders": Order.objects.filter(created_at__month=6).count()},
-            {"name": "July", "orders": Order.objects.filter(created_at__month=7).count()},
-            {"name": "August", "orders": Order.objects.filter(created_at__month=8).count()},
-            {"name": "September", "orders": Order.objects.filter(created_at__month=9).count()},
-            {"name": "October", "orders": Order.objects.filter(created_at__month=10).count()},
-            {"name": "November", "orders": Order.objects.filter(created_at__month=11).count()},
-            {"name": "December", "orders": Order.objects.filter(created_at__month=12).count()},
-        ],
+        "chartData": get_last_12_months_orders(orders),
         "statusData": [
             {"name": "Pending", "value": pending},
             {"name": "Shipped", "value": shipped},
@@ -264,13 +258,14 @@ def hospDashboard(request,loc_id:str):
 @router.get("/vendorDashboard/{loc_id}", response=dict)
 def vendDashboard(request,loc_id:str):
     orders = Order.objects.filter(to_location = loc_id)
+    inv = Inventory.objects.filter(location_id=loc_id)
     pending, shipped, delivered, cancelled = 0, 0, 0, 0
     for ord in orders:
         if ord.status == "PENDING":
             pending+=1
         elif ord.status == "SHIPPED":
             shipped+=1
-        elif ord.status == "DELIVERED":
+        elif ord.status == "DELIVERED" or ord.status == "IN-INVENTORY":
             delivered+=1
         elif ord.status == "CANCELLED":
             cancelled+=1
@@ -280,21 +275,9 @@ def vendDashboard(request,loc_id:str):
             { "id": 1, "label": 'Total orders', "value": Order.objects.filter(to_location = loc_id).count(), "icon": '', "color": 'blue'},
             { "id": 2, "label": 'Pending orders', "value": pending, "icon": '🏥', "color": 'green'},
             { "id": 6, "label": 'Total batches', "value": Batch.objects.count(), "icon": '💊', "color": 'purple'},
+            { "id": 4, "label": 'Near Expiry', "value": inv.filter(exp_date__lte=datetime.date.today() + datetime.timedelta(days=30)).count(), "icon": '💊', "color": 'red'},
         ],
-        "chartData": [
-            {"name": "January", "orders": Order.objects.filter(created_at__month=1).count()},
-            {"name": "February", "orders": Order.objects.filter(created_at__month=2).count()},
-            {"name": "March", "orders": Order.objects.filter(created_at__month=3).count()},
-            {"name": "April", "orders": Order.objects.filter(created_at__month=4).count()},
-            {"name": "May", "orders": Order.objects.filter(created_at__month=5).count()},
-            {"name": "June", "orders": Order.objects.filter(created_at__month=6).count()},
-            {"name": "July", "orders": Order.objects.filter(created_at__month=7).count()},
-            {"name": "August", "orders": Order.objects.filter(created_at__month=8).count()},
-            {"name": "September", "orders": Order.objects.filter(created_at__month=9).count()},
-            {"name": "October", "orders": Order.objects.filter(created_at__month=10).count()},
-            {"name": "November", "orders": Order.objects.filter(created_at__month=11).count()},
-            {"name": "December", "orders": Order.objects.filter(created_at__month=12).count()},
-        ],
+        "chartData": get_last_12_months_orders(orders),
         "statusData": [
             {"name": "Pending", "value": pending},
             {"name": "Shipped", "value": shipped},

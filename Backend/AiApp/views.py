@@ -2,7 +2,6 @@ from django.db import models
 from AiApp.models import Forecast
 from MasterApp.models import Drug, Location
 
-
 def create_forecast(data):
     return Forecast.objects.create(**data)
 
@@ -24,9 +23,9 @@ def delete_forecast(forecast_id):
 from django.db import models
 from AiApp.models import Forecast
 from MasterApp.models import Drug, Location
-from InventoryApp.models import ConsumptionRecord  # app label as in your project
+from InventoryApp.models import ConsumptionRecord  
 
-
+import uuid
 import datetime
 import numpy as np
 import pandas as pd
@@ -35,7 +34,7 @@ from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 
-DEFAULT_MAX_CAPACITY = 80  # units per day, demo only
+DEFAULT_MAX_CAPACITY = 100  
 
 
 def _load_base_dataframe():
@@ -72,7 +71,6 @@ def _load_base_dataframe():
         inplace=True,
     )
     df["date"] = pd.to_datetime(df["date"])
-    # dummy columns to keep meta structure (optional)
     df["drug_category"] = ""
     df["drug_form"] = ""
     df["location_region"] = ""
@@ -98,6 +96,8 @@ def _build_training_dataframe(start_date=None, end_date=None):
             "total_qty",
         ]
     ].copy()
+    df_model["drug_code"] = df_model["drug_id"].astype("category").cat.codes
+    df_model["location_code"] = df_model["location_id"].astype("category").cat.codes
     if df_model.empty:
         return None, None
 
@@ -139,8 +139,8 @@ def _build_training_dataframe(start_date=None, end_date=None):
 
 def _train_xgb_model(df_model):
     feature_cols = [
-        "drug_id",
-        "location_id",
+        "drug_code",
+        "location_code",
         "year",
         "month",
         "day",
@@ -196,10 +196,6 @@ def _create_future_frame_for_pair(drug_id, location_id, last_date, periods=7):
     return fdf
 
 
-def _estimate_wastage(predicted_qty, max_capacity=DEFAULT_MAX_CAPACITY):
-    if predicted_qty >= max_capacity:
-        return 0
-    return max_capacity - predicted_qty
 
 
 def generate_and_store_forecasts(days_ahead=7):
@@ -233,6 +229,8 @@ def generate_and_store_forecasts(days_ahead=7):
         future = _create_future_frame_for_pair(
             d_id, l_id, last_date, periods=days_ahead
         )
+        future["drug_code"] = sub["drug_code"].iloc[0]
+        future["location_code"] = sub["location_code"].iloc[0]
 
         last_row = sub.sort_values("date").iloc[-1]
         future["lag_1"] = last_row["total_qty"]
@@ -247,9 +245,6 @@ def generate_and_store_forecasts(days_ahead=7):
         future["predicted_qty"] = np.maximum(
             np.round(preds).astype(int), 0
         )
-        future["estimated_wastage"] = future["predicted_qty"].apply(
-            _estimate_wastage
-        )
 
         future = future.merge(
             df_meta,
@@ -259,13 +254,16 @@ def generate_and_store_forecasts(days_ahead=7):
 
         for _, fr in future.iterrows():
             Forecast.objects.create(
-                drug_id=Drug.objects.get(id=int(fr["drug_id"])),
-                location_id=Location.objects.get(id=int(fr["location_id"])),
+                id=f"FC-{uuid.uuid4()}",
+                drug_id=Drug.objects.get(id=fr["drug_id"]),
+                location_id=Location.objects.get(id=fr["location_id"]),
                 forecast_date=fr["date"].date(),
                 predicted_qty=int(fr["predicted_qty"]),
-                estimated_wastage=int(fr["estimated_wastage"]),
             )
             total_rows += 1
 
     print(f"Total forecast rows stored: {total_rows}")
     return total_rows
+
+
+

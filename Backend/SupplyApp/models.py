@@ -10,7 +10,6 @@ class Batch(models.Model):
     mfg_date = models.DateField()
     exp_date = models.DateField()
     blockchain_hash = models.TextField()
-    qr_code_data = models.TextField()
 
     def __str__(self):
         return f"{self.drug_id.name} - {self.batch_number}"
@@ -42,7 +41,7 @@ class OrderItem(models.Model):
     id = models.CharField(primary_key=True, max_length=100)
     order_id = models.ForeignKey(Order, on_delete=models.CASCADE)
     drug_id = models.ForeignKey(Drug, on_delete=models.CASCADE)
-    batch_id = models.ForeignKey(Batch, on_delete=models.CASCADE)
+    batch_id = models.ForeignKey(Batch, on_delete=models.CASCADE, null=True, blank=True)
     qty = models.IntegerField()
 
     def __str__(self):

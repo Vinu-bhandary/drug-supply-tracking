@@ -11,12 +11,12 @@ class InventoryItemBase(BaseModel):
     exp_date: datetime
 
 class InventoryItemCreate(BaseModel):
-    id: str
-    location_id: str
+    order_number: str
+
+class InventoryVendorCreate(BaseModel):
     drug_id: str
     batch_id: str
     qty_on_hand: int
-    exp_date: datetime
 
 class InventoryItemUpdate(BaseModel):
     location_id: Optional[str] = None
@@ -72,7 +72,6 @@ class ConsumptionRecordBase(BaseModel):
     consumption_date: datetime
 
 class ConsumptionRecordCreate(BaseModel):
-    id: str
     recorded_by: Optional[str] = None
     drug_id: str
     location_id: str

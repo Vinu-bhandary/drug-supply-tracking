@@ -110,7 +110,7 @@ export default function OrdersOverview() {
         const total = orders.length;
         const pending = orders.filter((o) => o.status === "PENDING").length;
         const shipped = orders.filter((o) => o.status === "SHIPPED").length;
-        const delivered = orders.filter((o) => o.status === "DELIVERED").length;
+        const delivered = orders.filter((o) => o.status === "DELIVERED").length + orders.filter((o) => o.status === "IN-INVENTORY").length;
         const cancelled = orders.filter((o) => o.status === "CANCELLED").length;
         return { total, pending, shipped, delivered, cancelled };
     }, [orders]);
@@ -159,6 +159,7 @@ export default function OrdersOverview() {
                 <option value="SHIPPED">Shipped</option>
                 <option value="DELIVERED">Delivered</option>
                 <option value="CANCELLED">Cancelled</option>
+                <option value="IN-INVENTORY">In Inventory</option>
             </select>
             </div>
             <p className="text-xs text-slate-500">
@@ -166,7 +167,7 @@ export default function OrdersOverview() {
             </p>
         </div>
 
-        <GenericTable columns={columns} data={filtered} actions={actions} />
+        <GenericTable columns={columns} data={filtered}  />
 
         </DashboardLayout>
     );

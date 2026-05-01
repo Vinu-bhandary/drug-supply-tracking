@@ -1,45 +1,34 @@
 from django.db import models
 from BlockchainApp.models import BlockchainTransaction
-from SupplyApp.models import Batch
-
-
-def create_blockchain_tx(data):
-    return BlockchainTransaction.objects.create(**data)
-
-def read_blockchain_tx(tx_id):
-    return BlockchainTransaction.objects.get(id=tx_id)
-
-def update_blockchain_tx(tx_id, data):
-    obj = BlockchainTransaction.objects.get(id=tx_id)
-    for k, v in data.items():
-        setattr(obj, k, v)
-    obj.save()
-    return obj
-
-def delete_blockchain_tx(tx_id):
-    obj = BlockchainTransaction.objects.get(id=tx_id)
-    return obj.delete()
-
-
-##################################################################
-#CONNECT TO GANACHE
 from web3 import Web3
 import json
+import os
+from dotenv import load_dotenv
+from django.utils import timezone
+
+
+load_dotenv()
+
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
+
+
 
 w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:7545"))
+
 if not w3.is_connected():
     raise Exception("❌ Ganache is not running")
+
 print("✅ Connected to Ganache")
 
-# ACCOUNT (GANACHE PRIVATE KEY)
-
-PRIVATE_KEY = "0x0611b15e8be8842748234b1489b0d97518bde8a07ab4eaa9ddae860961f0358d"
 ACCOUNT = w3.eth.account.from_key(PRIVATE_KEY)
 
-# SMART CONTRACT DETAILS
-CONTRACT_ADDRESS = "0x1345850698BFC523b785f17AE34264BC826518ad"
 
-with open("contract_abi.json") as f:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+abi_path = os.path.join(BASE_DIR, "contract_abi.json")
+
+with open(abi_path) as f:
     abi = json.load(f)
 
 contract = w3.eth.contract(
@@ -47,118 +36,113 @@ contract = w3.eth.contract(
     abi=abi
 )
 
-#----------------------------------------------------------#
-# CREATE TRANSACTION (DB + BLOCKCHAIN)
 
-def create_blockchain_tx(data):
 
-    # 1. Save in DB
-    tx = BlockchainTransaction.objects.create(**data)
+def add_transaction_on_blockchain(order_id, status):
 
-    # 2. Save in Blockchain
-    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address, "pending")
 
     txn = contract.functions.addTransaction(
-        tx.id,
-        "CREATED"
-    ).build_transaction({
-        'from': ACCOUNT.address,
-        'nonce': nonce,
-        'gas': 200000,
-        'gasPrice': w3.to_wei('20', 'gwei')
-    })
-
-    signed = w3.eth.account.sign_transaction(txn, PRIVATE_KEY)
-    w3.eth.send_raw_transaction(signed.rawTransaction)
-
-    return tx
-#----------------------------------------------------------------#
-#add TRANSACTION
-def add_transaction_on_blockchain(tx_id, status):
-    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
-
-    tx = contract.functions.addTransaction(
-        tx_id,
+        order_id,
         status
     ).build_transaction({
         "from": ACCOUNT.address,
         "nonce": nonce,
         "gas": 300000,
-        "gasPrice": w3.to_wei("20", "gwei")
+        "gasPrice": w3.eth.gas_price
     })
 
-    signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
-    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    signed_tx = w3.eth.account.sign_transaction(txn, PRIVATE_KEY)
 
-    return w3.to_hex(tx_hash)
+    tx_hash = w3.eth.send_raw_transaction(
+        signed_tx.rawTransaction
+    )
 
-#getTransaction
-def get_transaction_from_blockchain(tx_id):
-    tx = contract.functions.getTransaction(tx_id).call()
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+    return tx_hash.hex(), receipt
+
+
+
+def create_blockchain_tx(order_id, status):
+
+    tx_hash, receipt = add_transaction_on_blockchain(order_id, status)
+
+    tx = BlockchainTransaction.objects.create(
+        id=f"{order_id}-{status}-{receipt.blockNumber}",
+        tx_hash=tx_hash,
+        tx_type=status,
+        created_at=timezone.now()
+    )
+
     return {
-        "id": tx[0],
-        "status": tx[1]
+        "tx_hash": tx_hash,
+        "block_number": receipt.blockNumber
     }
 
 
-# READ TRANSACTION
+def get_transaction_count(order_id):
 
-# def read_blockchain_tx(tx_id):
-#     tx = get_object_or_404(BlockchainTransaction, id=tx_id)
-
-#     blockchain_data = contract.functions.getTransaction(tx_id).call()
-
-#     return {
-#         "db_id": tx.id,
-#         "db_status": tx.status,
-#         "blockchain_id": blockchain_data[0],
-#         "blockchain_status": blockchain_data[1]
-#     }
-
-# #UPDATE TRANSACTION (BLOCKCHAIN ONLY)
+    return contract.functions.getTransactionCount(
+        order_id
+    ).call()
 
 
-# def update_blockchain_tx(tx_id, new_status):
-#     tx = get_object_or_404(BlockchainTransaction, id=tx_id)
+def get_transaction(order_id, index):
 
-#     nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    tx = contract.functions.getTransaction(
+        order_id,
+        index
+    ).call()
 
-#     txn = contract.functions.addTransaction(
-#         tx.id,
-#         new_status
-#     ).build_transaction({
-#         "from": ACCOUNT.address,
-#         "nonce": nonce,
-#         "gas": 300000,
-#         "gasPrice": w3.to_wei("20", "gwei")
-#     })
-
-#     signed_txn = w3.eth.account.sign_transaction(txn, PRIVATE_KEY)
-#     tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-
-#     tx.status = new_status
-#     tx.blockchain_hash = tx_hash.hex()
-#     tx.save()
-
-#     return tx
+    return {
+        "order_id": tx[0],
+        "status": tx[1],
+        "timestamp": tx[2]
+    }
 
 
+def get_all_transactions(order_id):
 
-# #SIMPLE TEST API (OPTIONAL)
+    data = contract.functions.getAllTransactions(order_id).call()
+
+    order_ids, statuses, timestamps = data
+
+    result = []
+
+    for i in range(len(order_ids)):
+        result.append({
+            "order_id": order_ids[i],
+            "status": statuses[i],
+            "timestamp": timestamps[i]
+        })
+
+    return result
 
 
-# @csrf_exempt
-# def test_blockchain(request):
-#     if request.method == "POST":
-#         data = {
-#             "status": "CREATED"
-#         }
-#         tx = create_blockchain_tx(data)
+def read_blockchain_tx(tx_id):
 
-#         return JsonResponse({
-#             "message": "Transaction created",
-#             "id": tx.id,
-#             "blockchain_hash": tx.blockchain_hash
-#         })
+    return BlockchainTransaction.objects.get(id=tx_id)
 
-#     return JsonResponse({"error": "Only POST allowed"})
+
+def update_blockchain_tx(tx_id, data):
+
+    obj = BlockchainTransaction.objects.get(id=tx_id)
+
+    for k, v in data.items():
+        setattr(obj, k, v)
+
+    obj.save()
+
+    return obj
+
+
+def delete_blockchain_tx(tx_id):
+
+    obj = BlockchainTransaction.objects.get(id=tx_id)
+
+    obj.delete()
+
+def list_blockchain_txs():
+
+    return BlockchainTransaction.objects.all()

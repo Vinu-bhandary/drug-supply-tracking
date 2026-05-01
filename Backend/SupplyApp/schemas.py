@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class OrderBase(BaseModel):
@@ -15,16 +15,6 @@ class OrderBase(BaseModel):
     tracking_number: str
     created_by_id: Optional[str] = None
 
-class OrderCreate(BaseModel):
-    id: str
-    order_number: str
-    from_location_id: str
-    to_location_id: str
-    status: str
-    carrier_name: str
-    tracking_number: str
-    created_by_id: Optional[str] = None
-
 class OrderUpdate(BaseModel):
     order_number: Optional[str] = None
     from_location_id: Optional[str] = None
@@ -36,9 +26,21 @@ class OrderUpdate(BaseModel):
     tracking_number: Optional[str] = None
     created_by_id: Optional[str] = None
 
+class OrderShip(BaseModel):
+    order_id: str
+    carrier_name: str
+    tracking_number: str
+
 class OrderOut(OrderBase):
-    class Config:
-        from_attributes = True
+    id: str
+    order_number: str
+    from_location_id: str
+    to_location_id: str
+    status: str
+    carrier_name: str
+    tracking_number: str
+    created_at: str
+    created_by_id: Optional[str] = None
 
 class OrderItemBase(BaseModel):
     id: str
@@ -47,15 +49,13 @@ class OrderItemBase(BaseModel):
     qty: int
 
 class OrderItemCreate(BaseModel):
-    id: str
-    order_id: str
     drug_id: str
-    qty: int
+    quantity: int
 
 class OrderItemUpdate(BaseModel):
-    order_id: Optional[str] = None
     drug_id: Optional[str] = None
-    qty: Optional[int] = None
+    quantity: Optional[int] = None
+    batch_id: Optional[str] = None
 
 class OrderItemOut(OrderItemBase):
     class Config:
@@ -65,19 +65,15 @@ class BatchBase(BaseModel):
     id: str
     drug_id: str
     batch_number: str
-    mfg_date: str
-    exp_date: str
+    mfg_date: datetime
+    exp_date: datetime
     blockchain_hash: str
-    qr_code_data: str
 
 class BatchCreate(BaseModel):
-    id: str
     drug_id: str
     batch_number: str
     mfg_date: datetime
     exp_date: datetime
-    blockchain_hash: str
-    qr_code_data: str
 
 class BatchUpdate(BaseModel):
     drug_id: Optional[str] = None
@@ -85,8 +81,16 @@ class BatchUpdate(BaseModel):
     mfg_date: Optional[datetime] = None
     exp_date: Optional[datetime] = None
     blockchain_hash: Optional[str] = None
-    qr_code_data: Optional[str] = None
 
 class BatchOut(BatchBase):
-    class Config:
-        from_attributes = True
+    id: str
+    drug_id: str
+    batch_number: str
+    mfg_date: str
+    exp_date: str
+    blockchain_hash: str
+
+class OrderCreate(BaseModel):
+    created_by_id: str
+    vendor_id: str
+    items: List[OrderItemCreate]

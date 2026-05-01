@@ -23,7 +23,7 @@ export default function InputForm({ fieldValues, onSubmit }) {
     
     return (
         <form onSubmit={handleSubmit}>
-            {fieldValues.map(({ label, name, type, options }) => (
+            {fieldValues.map(({ label, name, type, value, disabled, options, changeHandle }) => (
                 <div key={name} className="mb-4">
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor={name}>
                         {label}
@@ -33,7 +33,10 @@ export default function InputForm({ fieldValues, onSubmit }) {
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                             id={name}
                             name={name}
-                            onChange={handleChange}
+                            onChange={ (e) => {
+                                handleChange(e);
+                                if (changeHandle) changeHandle(e.target.value);
+                            }}
                         >
                             {options.map(option => (
                                 <option key={option.value} value={option.value}>
@@ -48,6 +51,8 @@ export default function InputForm({ fieldValues, onSubmit }) {
                             type={type}
                             name={name}
                             onChange={handleChange}
+                            value={value}
+                            disabled={disabled}
                         />
                     )}
                 </div>
