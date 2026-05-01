@@ -8,6 +8,7 @@ import { hospitalData } from '../../data/hospitalData';
 
 export default function HospitalDashboard() {
   const user = localStorage.getItem('role');
+  const loc_id = localStorage.getItem('location_id')
   useEffect(() => {
     if (user !== 'hospital') {
       alert('You are not authorized to access this page.');
@@ -17,25 +18,18 @@ export default function HospitalDashboard() {
   })
   const [data, setData] = useState(hospitalData);
 
-  // Mock API call
-  useEffect(() => {
-    // fetch('/api/hospital/dashboard')
-    //   .then(res => res.json())
-    //   .then(setData)
-    setData(hospitalData);
-  }, []);
 
-  const chartData = [
-    { name: 'Oct', orders: 120, value: 45000 },
-    { name: 'Nov', orders: 180, value: 52000 },
-    { name: 'Dec', orders: 220, value: 61000 },
-    { name: 'Jan', orders: 190, value: 58000 },
-  ];
+  useEffect(() => async () => {
+          const adminData = await fetch(`http://127.0.0.1:8000/api/seed/hospitalDashboard/${loc_id}`).then(res => res.json());
+          setData(adminData);
+      }, []);
+  console.log(data);
 
-  const statusData = [
-    { name: 'Active', value: 85 },
-    { name: 'Low Stock', value: 15 },
-  ];
+
+      const chartData = data.chartData || [];
+
+    const statusData = data.statusData || [];
+
 
   return (
     <DashboardLayout
@@ -44,6 +38,7 @@ export default function HospitalDashboard() {
       userRole="Hospital Admin"
       userName="John Doe"
     >
+      {console.log(data)}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {data.stats.map(stat => (
@@ -66,8 +61,7 @@ export default function HospitalDashboard() {
         <DoughnutChart data={statusData} title="Inventory Status" />
       </div>
 
-      {/* Table */}
-      <OrdersTable data={data.orders} />
+
     </DashboardLayout>
   );
 }

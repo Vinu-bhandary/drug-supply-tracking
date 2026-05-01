@@ -17,21 +17,14 @@ export default function VendorDashboard() {
     })
     const [data, setData] = useState(vendorData);
 
-    useEffect(() => {
-        setData(vendorData);
-    }, []);
+    useEffect(() => async () => {
+            const loc_id = localStorage.getItem('location_id');
+            const adminData = await fetch(`http://127.0.0.1:8000/api/seed/vendorDashboard/${loc_id}`).then(res => res.json());
+            setData(adminData);
+        }, []);
+    const chartData = data.chartData || [];
 
-    const chartData = [
-        { name: 'Oct', orders: 85, value: 32000 },
-        { name: 'Nov', orders: 110, value: 42000 },
-        { name: 'Dec', orders: 145, value: 55000 },
-        { name: 'Jan', orders: 120, value: 48000 },
-    ];
-
-    const statusData = [
-        { name: 'Delivered', value: 95 },
-        { name: 'Pending', value: 35 },
-    ];
+    const statusData = data.statusData || [];
 
     return (
         <DashboardLayout
@@ -60,7 +53,7 @@ export default function VendorDashboard() {
             <DoughnutChart data={statusData} title="Order Status Distribution" />
         </div>
 
-        <OrdersTable data={data.orders} />
+
         </DashboardLayout>
     );
 }

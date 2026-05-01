@@ -15,16 +15,26 @@ export default function Shipments() {
 
     const [shipments, setShipments] = useState([]);
 
+    useEffect(() => async () => {
+        const shipmentsData = await fetch(`http://127.0.0.1:8000/api/seed/orders/${localStorage.getItem('location_id')}/${user}`).then(res => res.json());
+        setShipments(shipmentsData);
+    }, []);
+
+
+    const shippedOrders = shipments.filter(order => order.status === 'SHIPPED' || order.status === 'DELIVERED');
+
+
     return (
         <DashboardLayout dashboardTitle="Shipments" dashboardSubtitle="Manage and track your shipments.">
             <GenericTable
-                data={shipments}
+                data={shippedOrders}
                 columns={[
-                    { key: 'trackingNumber', label: 'Tracking Number' },
-                    { key: 'destination', label: 'Destination' },
+                    { key: 'order_number', label: 'Order Number' },
+                    { key: 'tracking_number', label: 'Tracking Number' },
+                    { key: 'carrier_name', label: 'Carrier' },
+                    { key: 'to_location_id', label: 'Destination' },
                     { key: 'status', label: 'Status' },
                 ]}
-                actions={[]}
             />
         </DashboardLayout>
     );

@@ -231,16 +231,31 @@ class Command(BaseCommand):
 
             shipped_at = None
             delivered_at = None
+            cancelled_at = None
+
+            order_block_hash = f"BTX-{order_id}-T001"
+            shipped_block_hash = None
+            delivered_block_hash = None
+            cancelled_block_hash = None
             
             if status in ["SHIPPED", "DELIVERED"]:
-                # Ensure shipped_at is safely between 1 and created_days_ago - 2
                 shipped_days_ago = random.randint(1, max(1, created_days_ago - 2))
                 shipped_at = timezone.now() - timedelta(days=shipped_days_ago)
+                shipped_block_hash = f"BTX-{order_id}-T002"
             
             if status == "DELIVERED" and shipped_at:
-                # Ensure delivered_at is after shipped_at
                 delivered_days_ago = random.randint(1, max(1, shipped_days_ago - 1))
                 delivered_at = shipped_at - timedelta(days=delivered_days_ago)
+                delivered_block_hash = f"BTX-{order_id}-T003"
+            
+            if status == "CANCELLED" and shipped_at:
+                cancelled_days_ago = random.randint(1, max(1, shipped_days_ago - 1))
+                cancelled_at = shipped_at - timedelta(days=cancelled_days_ago)
+                cancelled_block_hash = f"BTX-{order_id}-T004"
+            elif status == "CANCELLED":
+                cancelled_days_ago = random.randint(1,max(1, created_days_ago - 2))
+                cancelled_at = timezone.now() - timedelta(days=cancelled_days_ago)
+                cancelled_block_hash = f"BTX-{order_id}-T004"
 
             order, _ = Order.objects.get_or_create(
                 id=order_id,
@@ -255,18 +270,25 @@ class Command(BaseCommand):
                     tracking_number=f"TRK{random.randint(100000000, 999999999)}" if status != "PENDING" else "",
                     created_by=random.choice([hosp_user, hosp_user_blr]),
                     created_at=timezone.now() - timedelta(days=created_days_ago),
+                    order_block_hash = order_block_hash,
+                    shipped_block_hash = shipped_block_hash,
+                    delivered_block_hash = delivered_block_hash,
+                    cancelled_at = cancelled_at,
+                    cancelled_block_hash = cancelled_block_hash,
                 ),
             )
 
             # Order items (2-4 items per order)
             drugs_list = list(drugs.values())
             num_items = random.randint(2, 4)
+            batches_list = list(batches.values())
             for item_idx in range(num_items):
                 OrderItem.objects.get_or_create(
                     id=f"ORDITEM-{order_num:03d}-{item_idx + 1:02d}",
                     defaults=dict(
                         order_id=order,
                         drug_id=random.choice(drugs_list),
+                        batch_id = random.choice(batches_list),
                         qty=random.randint(100, 1000),
                     ),
                 )
@@ -276,7 +298,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating consumption records...")
 
         drugs_list = list(drugs.values())
-        batches_list = list(batches.values())
+        
 
         for cons_num in range(1, 16):
             ConsumptionRecord.objects.get_or_create(

@@ -17,10 +17,10 @@ export default function Sidebar() {
 
     const vendorMenu = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/vendor/dashboard' },
-        { id: 'products', label: 'Product Catalog', icon: '📦', path: '/vendor/products' },
+        { id: 'products', label: 'Batches', icon: '📦', path: '/vendor/batches' },
         { id: 'orders', label: 'Orders Overview', icon: '🛒', path: '/vendor/orders' },
         { id: 'shipments', label: 'Shipments', icon: '🚚', path: '/vendor/shipments' },
-        { id: 'analytics', label: 'Sales Analytics', icon: '📈', path: '/vendor/analytics' },
+        // { id: 'analytics', label: 'Sales Analytics', icon: '📈', path: '/vendor/analytics' },
     ];
 
     const hospitalMenu = [

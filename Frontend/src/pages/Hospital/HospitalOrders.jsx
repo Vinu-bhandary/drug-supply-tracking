@@ -13,6 +13,12 @@ export default function HospitalOrders() {
     })
     const [orders, setOrders] = useState([]);
 
+    useEffect(() => async () => {
+        const loc_id = localStorage.getItem('location_id');
+        const ordersData = await fetch(`http://127.0.0.1:8000/api/seed/orders/${loc_id}`).then(res => res.json());
+        setOrders(ordersData);
+    }, []);
+
     return (
         <DashboardLayout dashboardTitle="Hospital Orders" dashboardSubtitle="View and manage your hospital's orders." userRole="Hospital Admin" userName="John Doe">
             <OrdersTable data={orders} />
